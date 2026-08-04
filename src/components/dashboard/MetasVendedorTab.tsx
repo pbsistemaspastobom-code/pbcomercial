@@ -133,18 +133,32 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
     try {
       const mes = meses[0];
       await criarSnapshot(`Antes de importação - ${MESES_LONGO[mes - 1]}`);
-      // agrega por vendedor: reconhecidos + combinados + atribuições manuais
+      // agrega por vendedor: reconhecidos + combinados + atribuições/criações manuais
       const soma: Record<string, number> = {};
       importResult.linhas.forEach((l) => { soma[l.codigo] = (soma[l.codigo] ?? 0) + l.valor; });
+      const criar: { codigo: string; nome: string; setor: string; ativo: boolean; updated_at: string }[] = [];
+      const agora = new Date().toISOString();
+      let seq = Date.now();
       importResult.naoReconhecidos.forEach((r) => {
-        const cod = assign[r.nome];
-        if (cod && cod !== "ignorar") soma[cod] = (soma[cod] ?? 0) + r.valor;
+        const escolha = assign[r.nome];
+        if (!escolha || escolha === "ignorar") return;
+        if (escolha === "__criar__") {
+          const codigo = "NV" + (seq++).toString().slice(-8);
+          criar.push({ codigo, nome: r.nome.toUpperCase(), setor: "Outros", ativo: true, updated_at: agora });
+          soma[codigo] = (soma[codigo] ?? 0) + r.valor;
+        } else {
+          soma[escolha] = (soma[escolha] ?? 0) + r.valor;
+        }
       });
+      if (criar.length) {
+        const { error: eC } = await supabase.from("vendedores_config").upsert(criar, { onConflict: "codigo" });
+        if (eC) throw eC;
+      }
       const payload = Object.entries(soma).map(([codigo, venda_liquida]) => ({ codigo, ano, mes, venda_liquida }));
       if (!payload.length) { toast.error("Nada para gravar."); setGravandoImport(false); return; }
       const { error } = await supabase.from("metas_vendedores").upsert(payload, { onConflict: "codigo,ano,mes" });
       if (error) throw error;
-      toast.success(`Importado: ${payload.length} vendedor(es).`);
+      toast.success(`Importado: ${payload.length} vendedor(es)${criar.length ? ` · ${criar.length} novo(s) criado(s)` : ""}.`);
       setImportResult(null);
       invalidar();
     } catch (e) { toast.error("Erro ao gravar: " + (e as Error).message); }

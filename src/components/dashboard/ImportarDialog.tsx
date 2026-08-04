@@ -72,6 +72,7 @@ export const ImportarDialog = React.memo(function ImportarDialog({ resultado, ve
                         className="border border-border rounded-lg px-2 py-1.5 text-sm max-w-[240px]"
                       >
                         <option value="ignorar">Ignorar (não salva)</option>
+                        <option value="__criar__">➕ Criar como novo vendedor</option>
                         {vendedores.map((v) => <option key={v.codigo} value={v.codigo}>{v.nome}</option>)}
                       </select>
                     </div>
