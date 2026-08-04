@@ -2,27 +2,39 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppShell, type NavKey } from "@/components/layout/AppShell";
 import { Header } from "@/components/dashboard/Header";
-import { KpiCards } from "@/components/dashboard/KpiCards";
-import { BarrasLazy, PizzaLazy } from "@/components/dashboard/ChartsLazy";
-import { FaturamentoGrupoTable } from "@/components/dashboard/FaturamentoGrupoTable";
 import { MetasVendedorTab } from "@/components/dashboard/MetasVendedorTab";
 import { TrimestralTab } from "@/components/dashboard/TrimestralTab";
 import { GerenciarEquipeModal } from "@/components/dashboard/GerenciarEquipeModal";
-import { EditarGruposModal } from "@/components/dashboard/EditarGruposModal";
 import { useMetasData } from "@/hooks/useMetasData";
-import { useGruposData } from "@/hooks/useGruposData";
-import { calcularKPIs, agregarGrupos } from "@/lib/financeiro";
-import { brl, pct, MESES, MESES_LONGO } from "@/lib/formato";
-import { Users } from "lucide-react";
+import { brl, pct, MESES, MESES_LONGO, semaforo } from "@/lib/formato";
+import { Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Users } from "lucide-react";
 
 const TITULOS: Record<NavKey, { t: string; s: string }> = {
-  dashboard: { t: "Painel Geral", s: "Indicadores comerciais e financeiros" },
+  dashboard: { t: "Painel Geral", s: "Visão anual consolidada — resultado 2026" },
   metas: { t: "Metas por Vendedor", s: "Acompanhamento individual e por setor" },
   relatorios: { t: "Relatórios", s: "Consolidado trimestral e anual" },
   equipe: { t: "Gerenciar Equipe", s: "Vendedores, setores e cadastro" },
 };
+
+const ANUAL = Array.from({ length: 12 }, (_, i) => i + 1);
+
+// Farol (card KPI) no estilo do design
+const cortxt = { verde: "text-primary", amarelo: "text-[#8a6d00]", vermelho: "text-[#d0342c]" };
+function Farol({ icone, titulo, valor, cor, destaque, amarelo, loading }: { icone: React.ReactNode; titulo: string; valor: string; cor?: "verde" | "amarelo" | "vermelho"; destaque?: boolean; amarelo?: boolean; loading?: boolean }) {
+  return (
+    <div className="relative overflow-hidden card-soft p-5">
+      {destaque && <span className="absolute left-0 right-0 top-0 h-1 bg-gold" />}
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-mute">{titulo}</span>
+        <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${amarelo ? "bg-[#fbf1c4] text-[#8a6d00]" : "bg-[#e8f1e5] text-primary"}`}>{icone}</span>
+      </div>
+      {loading ? <Skeleton className="h-8 w-28 mt-2" /> : <div className={`font-headline text-2xl font-bold mt-2 tnum ${cor ? cortxt[cor] : "text-primary"}`}>{valor}</div>}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -31,15 +43,15 @@ export default function Dashboard() {
   const [mesAtual, setMesAtual] = useState(new Date().getMonth() + 1);
   const [mesesSel, setMesesSel] = useState<number[]>([new Date().getMonth() + 1]);
   const [visao, setVisao] = useState<"mensal" | "anual">("mensal");
-  const [editarGrupos, setEditarGrupos] = useState(false);
   const [gerenciar, setGerenciar] = useState(false);
 
-  const meses = useMemo(() => (visao === "anual" ? Array.from({ length: 12 }, (_, i) => i + 1) : mesesSel), [visao, mesesSel]);
+  const meses = useMemo(() => (visao === "anual" ? ANUAL : mesesSel), [visao, mesesSel]);
   const multiMes = meses.length > 1;
 
+  // dados do período selecionado (aba Metas)
   const { linhas, todos, dias, isLoading, invalidar } = useMetasData(ano, meses);
-  const { series: gruposSeries, invalidar: invalidarGrupos } = useGruposData(ano);
-  const kpis = useMemo(() => calcularKPIs(meses, gruposSeries), [meses, gruposSeries]);
+  // dados anuais (Painel Geral) — sempre o ano inteiro, vindo do resultado importado
+  const anual = useMetasData(ano, ANUAL);
 
   useEffect(() => {
     const ric: (cb: () => void) => number =
@@ -55,31 +67,26 @@ export default function Dashboard() {
     return `${meses.map((m) => MESES[m - 1].toUpperCase()).join(" + ")} ${ano}`;
   }, [visao, meses, ano]);
 
-  const barData = useMemo(() => {
-    if (visao === "anual") {
-      return MESES.map((m, i) => ({ label: m, Meta: gruposSeries.reduce((s, g) => s + g.metas[i], 0), Faturamento: gruposSeries.reduce((s, g) => s + g.realizado[i], 0) }));
-    }
-    return agregarGrupos(meses, gruposSeries).map((g) => ({ label: g.grupo, Meta: g.meta, Faturamento: g.realizado }));
-  }, [visao, meses, gruposSeries]);
-  const pieData = useMemo(() => agregarGrupos(meses, gruposSeries).map((g) => ({ name: g.grupo, value: g.lucro })), [meses, gruposSeries]);
-
   const setMes = (m: number) => { setMesAtual(m); setMesesSel([m]); if (visao === "anual") setVisao("mensal"); };
 
-  const resumo = useMemo(() => {
-    const acima = linhas.filter((l) => l.atingimento >= 100).length;
-    const abaixo = linhas.filter((l) => l.atingimento < 100).length;
-    const totMeta = linhas.reduce((s, l) => s + l.meta, 0);
-    const totVl = linhas.reduce((s, l) => s + l.vendaLiquida, 0);
-    return { total: linhas.length, acima, abaixo, atg: totMeta > 0 ? (totVl / totMeta) * 100 : 0 };
-  }, [linhas]);
-  const abaixoMeta = useMemo(() => linhas.filter((l) => l.atingimento < 100).sort((a, b) => a.atingimento - b.atingimento), [linhas]);
+  // Painel Geral: 8 indicadores anuais, do resultado da planilha
+  const painel = useMemo(() => {
+    const meta = anual.linhas.reduce((s, l) => s + l.meta, 0);
+    const venda = anual.linhas.reduce((s, l) => s + l.vendaLiquida, 0);
+    const atingimento = meta > 0 ? (venda / meta) * 100 : 0;
+    const projValor = anual.dias.passados > 0 ? (venda / anual.dias.passados) * anual.dias.totais : 0;
+    const projMeta = meta > 0 ? (projValor / meta) * 100 : 0;
+    return { meta, venda, atingimento, projValor, projMeta, dias: anual.dias };
+  }, [anual.linhas, anual.dias]);
 
-  const cardCls = "card-soft p-5";
-  const h3 = "font-headline text-lg font-semibold text-primary mb-3";
+  const abaixoMeta = useMemo(
+    () => anual.linhas.filter((l) => l.meta > 0 && l.atingimento < 100).sort((a, b) => a.atingimento - b.atingimento),
+    [anual.linhas]
+  );
 
   const actions = nav === "equipe"
     ? <Button onClick={() => setGerenciar(true)} className="bg-primary hover:bg-primary-dark text-white"><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
-    : (nav === "dashboard" || nav === "metas")
+    : nav === "metas"
       ? <Header ano={ano} mes={mesAtual} onMes={setMes} visao={visao} onVisao={setVisao} periodoLabel={periodoLabel} />
       : undefined;
 
@@ -87,20 +94,21 @@ export default function Dashboard() {
     <AppShell active={nav} onNavigate={setNav} title={TITULOS[nav].t} subtitle={TITULOS[nav].s} actions={actions}>
       {nav === "dashboard" && (
         <>
-          <KpiCards k={kpis} loading={isLoading} />
-          <div className="grid lg:grid-cols-2 gap-4 mb-5">
-            <div className={cardCls}><h3 className={h3}>Meta vs Faturamento</h3><BarrasLazy data={barData} /></div>
-            <div className={cardCls}><h3 className={h3}>Lucro por grupo</h3><PizzaLazy data={pieData} /></div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+            <Farol icone={<Target className="w-4 h-4" />} titulo="Meta Geral Anual" valor={brl(painel.meta)} loading={anual.isLoading} destaque={painel.atingimento >= 100} />
+            <Farol icone={<DollarSign className="w-4 h-4" />} titulo="Venda Líquida Total" valor={brl(painel.venda)} loading={anual.isLoading} />
+            <Farol icone={<Percent className="w-4 h-4" />} titulo="Atingimento" valor={pct(painel.atingimento)} cor={semaforo(painel.atingimento)} loading={anual.isLoading} />
+            <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Projeção em Valor" valor={brl(painel.projValor)} loading={anual.isLoading} />
+            <Farol icone={<Target className="w-4 h-4" />} titulo="Projeção de Meta %" valor={pct(painel.projMeta)} cor={semaforo(painel.projMeta)} loading={anual.isLoading} />
           </div>
-          <div className={`${cardCls} mb-5`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`${h3} mb-0`}>Faturamento por grupo (12 meses)</h3>
-              <Button variant="outline" size="sm" onClick={() => setEditarGrupos(true)}>Editar Grupos</Button>
-            </div>
-            <FaturamentoGrupoTable series={gruposSeries} />
+          <div className="grid grid-cols-3 gap-4 max-w-2xl">
+            <Farol icone={<Calendar className="w-4 h-4" />} titulo="Total Dias Úteis (Ano)" valor={String(painel.dias.totais)} loading={anual.isLoading} />
+            <Farol icone={<Clock className="w-4 h-4" />} titulo="Dias Passados" valor={String(painel.dias.passados)} loading={anual.isLoading} />
+            <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Dias Restantes" valor={String(painel.dias.restantes)} amarelo loading={anual.isLoading} />
           </div>
+
           {abaixoMeta.length > 0 && (
-            <div className="rounded-xl border border-[#f5cfca] bg-[#fff5f4] p-5 mb-5">
+            <div className="rounded-xl border border-[#f5cfca] bg-[#fff5f4] p-5 mt-6">
               <h3 className="font-headline text-lg font-semibold text-[#b12318] mb-3">Vendedores abaixo da meta ({abaixoMeta.length})</h3>
               <div className="divide-y divide-[#f0d5d1]">
                 {abaixoMeta.map((l) => (
@@ -112,15 +120,6 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          <div className={cardCls}>
-            <h3 className={h3}>Resumo geral da equipe</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div><div className="text-2xl font-extrabold text-primary tnum">{resumo.total}</div><div className="text-xs text-ink-mute">Vendedores ativos</div></div>
-              <div><div className="text-2xl font-extrabold text-primary tnum">{resumo.acima}</div><div className="text-xs text-ink-mute">Acima da meta</div></div>
-              <div><div className="text-2xl font-extrabold text-[#d0342c] tnum">{resumo.abaixo}</div><div className="text-xs text-ink-mute">Abaixo da meta</div></div>
-              <div><div className="text-2xl font-extrabold text-primary tnum">{pct(resumo.atg)}</div><div className="text-xs text-ink-mute">Atingimento da equipe</div></div>
-            </div>
-          </div>
         </>
       )}
 
@@ -131,7 +130,7 @@ export default function Dashboard() {
       {nav === "relatorios" && <TrimestralTab ano={ano} />}
 
       {nav === "equipe" && (
-        <div className={cardCls}>
+        <div className="card-soft p-5">
           <div className="overflow-auto">
             <table className="w-full text-sm">
               <thead>
@@ -155,7 +154,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <EditarGruposModal open={editarGrupos} onOpenChange={setEditarGrupos} ano={ano} mes={mesAtual} series={gruposSeries} onSaved={invalidarGrupos} />
       <GerenciarEquipeModal open={gerenciar} onOpenChange={setGerenciar} vendedores={todos} onSaved={invalidar} />
     </AppShell>
   );

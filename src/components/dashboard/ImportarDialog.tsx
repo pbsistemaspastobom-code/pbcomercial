@@ -2,28 +2,32 @@
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { brl2 } from "@/lib/formato";
+import { brl2, MESES_LONGO } from "@/lib/formato";
 import type { ResultadoImport } from "@/lib/importVendas";
 
 interface Props {
   resultado: ResultadoImport | null;
   vendedores: { codigo: string; nome: string }[];
-  onConfirmar: (assign: Record<string, string>) => void; // nome -> codigo | "ignorar"
+  ano: number;
+  mesInicial: number;
+  onConfirmar: (assign: Record<string, string>, mes: number) => void; // nome -> codigo | "ignorar" | "__criar__"
   onCancelar: () => void;
   gravando: boolean;
 }
 
-export const ImportarDialog = React.memo(function ImportarDialog({ resultado, vendedores, onConfirmar, onCancelar, gravando }: Props) {
+export const ImportarDialog = React.memo(function ImportarDialog({ resultado, vendedores, ano, mesInicial, onConfirmar, onCancelar, gravando }: Props) {
   const open = !!resultado;
   const [assign, setAssign] = useState<Record<string, string>>({});
+  const [mes, setMes] = useState(mesInicial);
 
   useEffect(() => {
     if (resultado) {
       const init: Record<string, string> = {};
       resultado.naoReconhecidos.forEach((r) => { init[r.nome] = "ignorar"; });
       setAssign(init);
+      setMes(mesInicial);
     }
-  }, [resultado]);
+  }, [resultado, mesInicial]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onCancelar(); }}>
@@ -35,6 +39,13 @@ export const ImportarDialog = React.memo(function ImportarDialog({ resultado, ve
 
         {resultado && (
           <div className="overflow-auto flex-1 space-y-4 text-sm">
+            <div className="flex items-center gap-2 bg-pasto-claro/60 rounded-lg px-3 py-2">
+              <span className="text-sm font-semibold text-primary">Fechamento do mês:</span>
+              <select value={mes} onChange={(e) => setMes(Number(e.target.value))} className="border border-border rounded-lg px-2 py-1.5 text-sm font-medium">
+                {MESES_LONGO.map((m, i) => <option key={i} value={i + 1}>{`${m}/${ano}`}</option>)}
+              </select>
+              <span className="text-xs text-muted-foreground">O valor será gravado neste mês.</span>
+            </div>
             <div className="text-xs text-muted-foreground">Aba escolhida: <strong>{resultado.abaEscolhida}</strong></div>
 
             <div>
@@ -94,8 +105,8 @@ export const ImportarDialog = React.memo(function ImportarDialog({ resultado, ve
 
         <DialogFooter className="border-t pt-3">
           <Button variant="outline" onClick={onCancelar} disabled={gravando}>Cancelar</Button>
-          <Button onClick={() => onConfirmar(assign)} disabled={gravando}>
-            {gravando ? "Gravando..." : "Confirmar e gravar"}
+          <Button onClick={() => onConfirmar(assign, mes)} disabled={gravando}>
+            {gravando ? "Gravando..." : `Confirmar e gravar em ${MESES_LONGO[mes - 1]}`}
           </Button>
         </DialogFooter>
       </DialogContent>

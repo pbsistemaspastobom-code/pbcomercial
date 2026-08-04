@@ -127,11 +127,10 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
       setImportResult(res);
     } catch (e) { toast.error((e as Error).message); }
   };
-  const confirmarImport = async (assign: Record<string, string>) => {
+  const confirmarImport = async (assign: Record<string, string>, mes: number) => {
     if (!importResult) return;
     setGravandoImport(true);
     try {
-      const mes = meses[0];
       await criarSnapshot(`Antes de importação - ${MESES_LONGO[mes - 1]}`);
       // agrega por vendedor: reconhecidos + combinados + atribuições/criações manuais
       const soma: Record<string, number> = {};
@@ -158,8 +157,9 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
       if (!payload.length) { toast.error("Nada para gravar."); setGravandoImport(false); return; }
       const { error } = await supabase.from("metas_vendedores").upsert(payload, { onConflict: "codigo,ano,mes" });
       if (error) throw error;
-      toast.success(`Importado: ${payload.length} vendedor(es)${criar.length ? ` · ${criar.length} novo(s) criado(s)` : ""}.`);
+      toast.success(`Importado em ${MESES_LONGO[mes - 1]}: ${payload.length} vendedor(es)${criar.length ? ` · ${criar.length} novo(s) criado(s)` : ""}.`);
       setImportResult(null);
+      onMeses([mes]);
       invalidar();
     } catch (e) { toast.error("Erro ao gravar: " + (e as Error).message); }
     finally { setGravandoImport(false); }
@@ -222,14 +222,8 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
 
   return (
     <div>
-      {/* Filtros: mês e vendedor */}
-      <div className="flex flex-wrap gap-2 mb-4 items-center">
-        <Select value={String(meses[0] ?? 1)} onValueChange={(v) => onMeses([Number(v)])}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
-          <SelectContent>
-            {MESES_LONGO.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{`${m}/${ano}`}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      {/* Topo: filtro de vendedor + ações */}
+      <div className="flex flex-wrap gap-2 mb-5 items-center">
         <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
           <SelectTrigger className="w-[220px]"><SelectValue placeholder="Vendedor" /></SelectTrigger>
           <SelectContent>
@@ -239,6 +233,31 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
             ))}
           </SelectContent>
         </Select>
+
+        {!editando ? (
+          <Button variant="outline" disabled={multiMes} onClick={iniciarEdicao}><Pencil className="w-4 h-4" /> Editar Valores</Button>
+        ) : (
+          <>
+            <Button onClick={salvarEdicao} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</Button>
+            <Button variant="outline" onClick={() => setEditando(false)} disabled={salvando}>Cancelar</Button>
+          </>
+        )}
+        <Button variant="outline" disabled={multiMes || editando} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> Importar Planilha</Button>
+        <Button variant="outline" onClick={desfazer}><Undo2 className="w-4 h-4" /> Desfazer</Button>
+        <Button variant="outline" onClick={abrirHistorico}><History className="w-4 h-4" /> Histórico</Button>
+        <Popover trigger={<Button variant="outline"><Sigma className="w-4 h-4" /> Somar Meses</Button>} className="w-48">
+          <div className="grid grid-cols-3 gap-1">
+            {MESES.map((m, i) => (
+              <label key={m} className="flex items-center gap-1 text-xs">
+                <input type="checkbox" checked={meses.includes(i + 1)} onChange={() => toggleMes(i + 1)} />{m}
+              </label>
+            ))}
+          </div>
+        </Popover>
+        <Button variant="outline" onClick={() => setGerenciarAberto(true)}><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
+        <Button variant="outline" onClick={exportar}><Download className="w-4 h-4" /> Exportar Excel</Button>
+        <Button variant="outline" onClick={() => setOculto((o) => !o)}>{oculto ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />} {oculto ? "Mostrar" : "Ocultar"} Valores</Button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.ods" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onArquivo(f); e.target.value = ""; }} />
         {multiMes && <span className="text-xs text-muted-foreground">Somando {meses.length} meses</span>}
       </div>
 
@@ -266,34 +285,6 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
           <h3 className="text-pasto-escuro font-semibold mb-3">Distribuição de Metas</h3>
           <PizzaLazy data={pieData} />
         </div>
-      </div>
-
-      {/* Barra de ações */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {!editando ? (
-          <Button variant="outline" disabled={multiMes} onClick={iniciarEdicao}><Pencil className="w-4 h-4" /> Editar Valores</Button>
-        ) : (
-          <>
-            <Button onClick={salvarEdicao} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</Button>
-            <Button variant="outline" onClick={() => setEditando(false)} disabled={salvando}>Cancelar</Button>
-          </>
-        )}
-        <Button variant="outline" disabled={multiMes || editando} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> Importar Planilha</Button>
-        <Button variant="outline" onClick={desfazer}><Undo2 className="w-4 h-4" /> Desfazer</Button>
-        <Button variant="outline" onClick={abrirHistorico}><History className="w-4 h-4" /> Histórico</Button>
-        <Popover trigger={<Button variant="outline"><Sigma className="w-4 h-4" /> Somar Meses</Button>} className="w-48">
-          <div className="grid grid-cols-3 gap-1">
-            {MESES.map((m, i) => (
-              <label key={m} className="flex items-center gap-1 text-xs">
-                <input type="checkbox" checked={meses.includes(i + 1)} onChange={() => toggleMes(i + 1)} />{m}
-              </label>
-            ))}
-          </div>
-        </Popover>
-        <Button variant="outline" onClick={() => setGerenciarAberto(true)}><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
-        <Button variant="outline" onClick={exportar}><Download className="w-4 h-4" /> Exportar Excel</Button>
-        <Button variant="outline" onClick={() => setOculto((o) => !o)}>{oculto ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />} {oculto ? "Mostrar" : "Ocultar"} Valores</Button>
-        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.ods" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onArquivo(f); e.target.value = ""; }} />
       </div>
 
       {multiMes && <div className="mb-3 text-xs bg-pasto-claro text-pasto-escuro rounded-lg px-3 py-2 inline-block">Modo análise ({meses.length} meses somados) — edição e importação desabilitadas.</div>}
@@ -365,7 +356,7 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
         </table>
       </div>
 
-      <ImportarDialog resultado={importResult} vendedores={linhas.map((l) => ({ codigo: l.codigo, nome: l.nome }))} onConfirmar={confirmarImport} onCancelar={() => setImportResult(null)} gravando={gravandoImport} />
+      <ImportarDialog resultado={importResult} vendedores={linhas.map((l) => ({ codigo: l.codigo, nome: l.nome }))} ano={ano} mesInicial={meses[0] ?? new Date().getMonth() + 1} onConfirmar={confirmarImport} onCancelar={() => setImportResult(null)} gravando={gravandoImport} />
 
       <GerenciarEquipeModal open={gerenciarAberto} onOpenChange={setGerenciarAberto} vendedores={todos} onSaved={invalidar} />
 
