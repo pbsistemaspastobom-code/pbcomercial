@@ -60,7 +60,8 @@ export const ImportarDialog = React.memo(function ImportarDialog({ resultado, ve
 
             {resultado.naoReconhecidos.length > 0 && (
               <div>
-                <div className="font-semibold text-[#b12318] mb-1">Nao reconhecidos ({resultado.naoReconhecidos.length}) - atribua ou ignore</div>
+                <div className="font-semibold text-[#b12318] mb-1">Novos na planilha ({resultado.naoReconhecidos.length}) — vincule a um vendedor do sistema</div>
+                <div className="text-xs text-muted-foreground mb-2">Estes nomes vieram na planilha mas não existem no sistema. Escolha em quem lançar o valor de cada um, ou deixe em Ignorar.</div>
                 <div className="rounded-lg border border-[#f5cfca] divide-y">
                   {resultado.naoReconhecidos.map((r, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 px-3 py-2">
@@ -68,9 +69,9 @@ export const ImportarDialog = React.memo(function ImportarDialog({ resultado, ve
                       <select
                         value={assign[r.nome] ?? "ignorar"}
                         onChange={(e) => setAssign((a) => ({ ...a, [r.nome]: e.target.value }))}
-                        className="border border-border rounded-lg px-2 py-1.5 text-sm max-w-[220px]"
+                        className="border border-border rounded-lg px-2 py-1.5 text-sm max-w-[240px]"
                       >
-                        <option value="ignorar">Ignorar</option>
+                        <option value="ignorar">Ignorar (não salva)</option>
                         {vendedores.map((v) => <option key={v.codigo} value={v.codigo}>{v.nome}</option>)}
                       </select>
                     </div>

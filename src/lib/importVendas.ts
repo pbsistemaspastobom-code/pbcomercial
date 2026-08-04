@@ -92,19 +92,31 @@ export function criarMatcher(vendedores: Vend[]): Matcher {
     // 3) nome cadastrado (banco) exato
     const exato = vendedores.find((v) => norm(v.nome) === n);
     if (exato) return { codigo: exato.codigo, combinado: false };
-    // 4a) fuzzy por conteúdo: um contém o outro
-    const contido = vendedores.find((v) => { const vn = norm(v.nome); return vn.includes(n) || n.includes(vn); });
+    // 4a) por conteúdo: um contém o outro — só se for trecho significativo (evita casar nome novo por engano)
+    const nTokens = n.split(" ").filter((t) => t.length >= 2);
+    const contido = vendedores.find((v) => {
+      const vn = norm(v.nome);
+      if (vn === n) return true;
+      const curto = n.length <= vn.length ? n : vn;
+      const longo = curto === n ? vn : n;
+      return longo.includes(curto) && (curto.length >= 6 || curto.split(" ").filter((t) => t.length >= 2).length >= 2);
+    });
     if (contido) return { codigo: contido.codigo, combinado: false };
-    // 4b) fuzzy por tokens (tolera troca de letra: marcos -> marcus)
-    const tks = n.split(" ").filter((t) => t.length >= 2);
+    // 4b) por tokens (tolera troca de letra: marcos -> marcus) — exige >=2 tokens casados
     let melhor: { codigo: string; score: number } | null = null;
     for (const v of vendedores) {
       const vtk = norm(v.nome).split(" ").filter((t) => t.length >= 2);
       let score = 0;
-      for (const t of tks) if (vtk.some((x) => tokenSimilar(t, x))) score++;
-      if (score >= 2 && (!melhor || score > melhor.score)) melhor = { codigo: v.codigo, score };
+      for (const t of nTokens) if (vtk.some((x) => tokenSimilar(t, x))) score++;
+      const minimo = Math.max(2, Math.ceil(nTokens.length * 0.6));
+      if (score >= minimo && (!melhor || score > melhor.score)) melhor = { codigo: v.codigo, score };
     }
     if (melhor) return { codigo: melhor.codigo, combinado: false };
+    // 4c) nome de um termo só: liga se casar unicamente com o primeiro nome de UM vendedor
+    if (nTokens.length === 1) {
+      const cands = vendedores.filter((v) => tokenSimilar(nTokens[0], norm(v.nome).split(" ")[0]));
+      if (cands.length === 1) return { codigo: cands[0].codigo, combinado: false };
+    }
     // 5) alias/combine por conteúdo parcial (>=3)
     for (const [ali, cod] of Object.entries(ALIASES)) if (ali.length >= 3 && (n.includes(ali) || ali.includes(n))) return { codigo: cod, combinado: false };
     for (const [ali, cod] of Object.entries(COMBINE_VENDORS)) if (ali.length >= 3 && (n.includes(ali) || ali.includes(n))) return { codigo: cod, combinado: true };
