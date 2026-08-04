@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShell, type NavKey } from "@/components/layout/AppShell";
 import { Header } from "@/components/dashboard/Header";
+import { BarrasLazy, PizzaLazy } from "@/components/dashboard/ChartsLazy";
 import { MetasVendedorTab } from "@/components/dashboard/MetasVendedorTab";
 import { TrimestralTab } from "@/components/dashboard/TrimestralTab";
 import { GerenciarEquipeModal } from "@/components/dashboard/GerenciarEquipeModal";
+import { EditarGruposModal } from "@/components/dashboard/EditarGruposModal";
 import { useMetasData } from "@/hooks/useMetasData";
+import { useGruposData } from "@/hooks/useGruposData";
+import { agregarGrupos } from "@/lib/financeiro";
 import { brl, pct, MESES, MESES_LONGO, semaforo } from "@/lib/formato";
 import { Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Users } from "lucide-react";
 
@@ -20,9 +24,8 @@ const TITULOS: Record<NavKey, { t: string; s: string }> = {
 };
 
 const ANUAL = Array.from({ length: 12 }, (_, i) => i + 1);
-
-// Farol (card KPI) no estilo do design
 const cortxt = { verde: "text-primary", amarelo: "text-[#8a6d00]", vermelho: "text-[#d0342c]" };
+
 function Farol({ icone, titulo, valor, cor, destaque, amarelo, loading }: { icone: React.ReactNode; titulo: string; valor: string; cor?: "verde" | "amarelo" | "vermelho"; destaque?: boolean; amarelo?: boolean; loading?: boolean }) {
   return (
     <div className="relative overflow-hidden card-soft p-5">
@@ -44,14 +47,13 @@ export default function Dashboard() {
   const [mesesSel, setMesesSel] = useState<number[]>([new Date().getMonth() + 1]);
   const [visao, setVisao] = useState<"mensal" | "anual">("mensal");
   const [gerenciar, setGerenciar] = useState(false);
+  const [editarGrupos, setEditarGrupos] = useState(false);
 
   const meses = useMemo(() => (visao === "anual" ? ANUAL : mesesSel), [visao, mesesSel]);
   const multiMes = meses.length > 1;
 
-  // dados do período selecionado (aba Metas)
   const { linhas, todos, dias, isLoading, invalidar } = useMetasData(ano, meses);
-  // dados anuais (Painel Geral) — sempre o ano inteiro, vindo do resultado importado
-  const anual = useMetasData(ano, ANUAL);
+  const { series: gruposSeries, invalidar: invalidarGrupos } = useGruposData(ano);
 
   useEffect(() => {
     const ric: (cb: () => void) => number =
@@ -69,57 +71,59 @@ export default function Dashboard() {
 
   const setMes = (m: number) => { setMesAtual(m); setMesesSel([m]); if (visao === "anual") setVisao("mensal"); };
 
-  // Painel Geral: 8 indicadores anuais, do resultado da planilha
   const painel = useMemo(() => {
-    const meta = anual.linhas.reduce((s, l) => s + l.meta, 0);
-    const venda = anual.linhas.reduce((s, l) => s + l.vendaLiquida, 0);
+    const meta = linhas.reduce((s, l) => s + l.meta, 0);
+    const venda = linhas.reduce((s, l) => s + l.vendaLiquida, 0);
     const atingimento = meta > 0 ? (venda / meta) * 100 : 0;
-    const projValor = anual.dias.passados > 0 ? (venda / anual.dias.passados) * anual.dias.totais : 0;
+    const projValor = dias.passados > 0 ? (venda / dias.passados) * dias.totais : 0;
     const projMeta = meta > 0 ? (projValor / meta) * 100 : 0;
-    return { meta, venda, atingimento, projValor, projMeta, dias: anual.dias };
-  }, [anual.linhas, anual.dias]);
+    return { meta, venda, atingimento, projValor, projMeta, dias };
+  }, [linhas, dias]);
 
-  const abaixoMeta = useMemo(
-    () => anual.linhas.filter((l) => l.meta > 0 && l.atingimento < 100).sort((a, b) => a.atingimento - b.atingimento),
-    [anual.linhas]
-  );
+  const anualView = visao === "anual" || multiMes;
+  const tMeta = visao === "anual" ? "Meta Geral Anual" : multiMes ? "Meta do Período" : `Meta ${MESES[meses[0] - 1]}`;
+  const tDias = anualView ? "Total Dias Úteis (Período)" : "Total Dias Úteis";
+
+  // gráficos anuais
+  const barData = useMemo(() => MESES.map((m, i) => ({ label: m, Meta: gruposSeries.reduce((s, g) => s + g.metas[i], 0), Faturamento: gruposSeries.reduce((s, g) => s + g.realizado[i], 0) })), [gruposSeries]);
+  const pieData = useMemo(() => agregarGrupos(ANUAL, gruposSeries).map((g) => ({ name: g.grupo, value: g.lucro })), [gruposSeries]);
 
   const actions = nav === "equipe"
     ? <Button onClick={() => setGerenciar(true)} className="bg-primary hover:bg-primary-dark text-white"><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
-    : nav === "metas"
+    : (nav === "dashboard" || nav === "metas")
       ? <Header ano={ano} mes={mesAtual} onMes={setMes} visao={visao} onVisao={setVisao} periodoLabel={periodoLabel} />
       : undefined;
+
+  const cardCls = "card-soft p-5";
+  const h3 = "font-headline text-lg font-semibold text-primary mb-3";
 
   return (
     <AppShell active={nav} onNavigate={setNav} title={TITULOS[nav].t} subtitle={TITULOS[nav].s} actions={actions}>
       {nav === "dashboard" && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-            <Farol icone={<Target className="w-4 h-4" />} titulo="Meta Geral Anual" valor={brl(painel.meta)} loading={anual.isLoading} destaque={painel.atingimento >= 100} />
-            <Farol icone={<DollarSign className="w-4 h-4" />} titulo="Venda Líquida Total" valor={brl(painel.venda)} loading={anual.isLoading} />
-            <Farol icone={<Percent className="w-4 h-4" />} titulo="Atingimento" valor={pct(painel.atingimento)} cor={semaforo(painel.atingimento)} loading={anual.isLoading} />
-            <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Projeção em Valor" valor={brl(painel.projValor)} loading={anual.isLoading} />
-            <Farol icone={<Target className="w-4 h-4" />} titulo="Projeção de Meta %" valor={pct(painel.projMeta)} cor={semaforo(painel.projMeta)} loading={anual.isLoading} />
+            <Farol icone={<Target className="w-4 h-4" />} titulo={tMeta} valor={brl(painel.meta)} loading={isLoading} destaque={painel.atingimento >= 100} />
+            <Farol icone={<DollarSign className="w-4 h-4" />} titulo="Venda Líquida" valor={brl(painel.venda)} loading={isLoading} />
+            <Farol icone={<Percent className="w-4 h-4" />} titulo="Atingimento" valor={pct(painel.atingimento)} cor={semaforo(painel.atingimento)} loading={isLoading} />
+            <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Projeção em Valor" valor={brl(painel.projValor)} loading={isLoading} />
+            <Farol icone={<Target className="w-4 h-4" />} titulo="Projeção de Meta %" valor={pct(painel.projMeta)} cor={semaforo(painel.projMeta)} loading={isLoading} />
           </div>
-          <div className="grid grid-cols-3 gap-4 max-w-2xl">
-            <Farol icone={<Calendar className="w-4 h-4" />} titulo="Total Dias Úteis (Ano)" valor={String(painel.dias.totais)} loading={anual.isLoading} />
-            <Farol icone={<Clock className="w-4 h-4" />} titulo="Dias Passados" valor={String(painel.dias.passados)} loading={anual.isLoading} />
-            <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Dias Restantes" valor={String(painel.dias.restantes)} amarelo loading={anual.isLoading} />
+          <div className="grid grid-cols-3 gap-4 max-w-2xl mb-6">
+            <Farol icone={<Calendar className="w-4 h-4" />} titulo={tDias} valor={String(painel.dias.totais)} loading={isLoading} />
+            <Farol icone={<Clock className="w-4 h-4" />} titulo="Dias Passados" valor={String(painel.dias.passados)} loading={isLoading} />
+            <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Dias Restantes" valor={String(painel.dias.restantes)} amarelo loading={isLoading} />
           </div>
 
-          {abaixoMeta.length > 0 && (
-            <div className="rounded-xl border border-[#f5cfca] bg-[#fff5f4] p-5 mt-6">
-              <h3 className="font-headline text-lg font-semibold text-[#b12318] mb-3">Vendedores abaixo da meta ({abaixoMeta.length})</h3>
-              <div className="divide-y divide-[#f0d5d1]">
-                {abaixoMeta.map((l) => (
-                  <div key={l.codigo} className="flex justify-between py-1.5 text-sm">
-                    <span>{l.nome} <span className="text-xs text-ink-mute">· {l.setor}</span></span>
-                    <span className="tnum"><strong className="text-[#b12318]">{pct(l.atingimento)}</strong> · falta {brl(l.faltaMeta)}</span>
-                  </div>
-                ))}
+          <div className="grid lg:grid-cols-2 gap-4">
+            <div className={cardCls}><h3 className={h3}>Meta vs Faturamento (mês a mês)</h3><BarrasLazy data={barData} /></div>
+            <div className={cardCls}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className={`${h3} mb-0`}>Lucro por grupo</h3>
+                <Button variant="outline" size="sm" onClick={() => setEditarGrupos(true)}>Editar Grupos</Button>
               </div>
+              <PizzaLazy data={pieData} />
             </div>
-          )}
+          </div>
         </>
       )}
 
@@ -130,7 +134,7 @@ export default function Dashboard() {
       {nav === "relatorios" && <TrimestralTab ano={ano} />}
 
       {nav === "equipe" && (
-        <div className="card-soft p-5">
+        <div className={cardCls}>
           <div className="overflow-auto">
             <table className="w-full text-sm">
               <thead>
@@ -154,6 +158,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      <EditarGruposModal open={editarGrupos} onOpenChange={setEditarGrupos} ano={ano} mes={mesAtual} series={gruposSeries} onSaved={invalidarGrupos} />
       <GerenciarEquipeModal open={gerenciar} onOpenChange={setGerenciar} vendedores={todos} onSaved={invalidar} />
     </AppShell>
   );
