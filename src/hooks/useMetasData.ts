@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { VENDEDORES, PLANO_POR_CODIGO, type Setor } from "@/data/planejamento2026";
+import { type Setor } from "@/data/planejamento2026";
 import { diasUteisAgregado } from "@/lib/diasUteis";
 
 export interface VendedorEfetivo { codigo: string; nome: string; setor: Setor; ativo: boolean; }
@@ -12,14 +12,14 @@ export interface LinhaVendedor {
   faltaMeta: number; mediaDiaUtil: number; ritmoNecessario: number;
   projecao: number; projecaoPct: number;
 }
-interface HistRow { codigo: string; mes: number; venda_liquida: number | null; }
+interface HistRow { codigo: string; mes: number; meta: number | null; venda_liquida: number | null; }
 interface ConfigRow { codigo: string; nome: string | null; setor: string | null; ativo: boolean | null; }
 
 const TIMEOUT = 4000;
 
 async function fetchVendas(ano: number, meses: number[], signal?: AbortSignal): Promise<HistRow[]> {
   const { data, error } = await supabase
-    .from("metas_vendedores").select("codigo, mes, venda_liquida")
+    .from("metas_vendedores").select("codigo, mes, meta, venda_liquida")
     .eq("ano", ano).in("mes", meses).abortSignal(signal as AbortSignal);
   if (error) throw error;
   return (data ?? []) as HistRow[];
@@ -31,19 +31,14 @@ async function fetchConfig(signal?: AbortSignal): Promise<ConfigRow[]> {
   return (data ?? []) as ConfigRow[];
 }
 
-/** Lista efetiva de vendedores: estático + overrides/novos do banco. */
-function mesclarVendedores(config: ConfigRow[]): VendedorEfetivo[] {
-  const cfg: Record<string, ConfigRow> = {};
-  for (const c of config) cfg[c.codigo] = c;
-  const base: VendedorEfetivo[] = VENDEDORES.map((v) => {
-    const c = cfg[v.codigo];
-    return { codigo: v.codigo, nome: c?.nome || v.nome, setor: (c?.setor as Setor) || v.setor, ativo: c?.ativo ?? v.ativo };
-  });
-  const conhecidos = new Set(VENDEDORES.map((v) => v.codigo));
+/** Lista de vendedores: SOMENTE do banco (vendedores_config). Nada estático. */
+function montarVendedores(config: ConfigRow[]): VendedorEfetivo[] {
+  const out: VendedorEfetivo[] = [];
   for (const c of config) {
-    if (!conhecidos.has(c.codigo)) base.push({ codigo: c.codigo, nome: c.nome || c.codigo, setor: (c.setor as Setor) || "Outros", ativo: c.ativo ?? true });
+    if (!c.codigo) continue;
+    out.push({ codigo: c.codigo, nome: c.nome || c.codigo, setor: (c.setor as Setor) || "Outros", ativo: c.ativo ?? true });
   }
-  return base;
+  return out;
 }
 
 export function useMetasData(ano: number, meses: number[]) {
@@ -66,14 +61,17 @@ export function useMetasData(ano: number, meses: number[]) {
 
   const dias = useMemo(() => diasUteisAgregado(ano, meses), [ano, mesesKey]);
 
-  const todos = useMemo<VendedorEfetivo[]>(() => mesclarVendedores(query.data?.config ?? []), [query.data]);
+  const todos = useMemo<VendedorEfetivo[]>(() => montarVendedores(query.data?.config ?? []), [query.data]);
 
   const linhas = useMemo<LinhaVendedor[]>(() => {
     const vl: Record<string, number> = {};
-    for (const r of query.data?.vendas ?? []) vl[r.codigo] = (vl[r.codigo] ?? 0) + (Number(r.venda_liquida) || 0);
-
+    const mt: Record<string, number> = {};
+    for (const r of query.data?.vendas ?? []) {
+      vl[r.codigo] = (vl[r.codigo] ?? 0) + (Number(r.venda_liquida) || 0);
+      mt[r.codigo] = (mt[r.codigo] ?? 0) + (Number(r.meta) || 0);
+    }
     return todos.filter((v) => v.ativo).map((v) => {
-      const meta = meses.reduce((s, m) => s + (PLANO_POR_CODIGO[v.codigo]?.metas[m - 1] ?? 0), 0);
+      const meta = mt[v.codigo] ?? 0;
       const vendaLiquida = vl[v.codigo] ?? 0;
       const atingimento = meta > 0 ? (vendaLiquida / meta) * 100 : 0;
       const faltaMeta = Math.max(meta - vendaLiquida, 0);
