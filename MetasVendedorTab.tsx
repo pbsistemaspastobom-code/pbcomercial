@@ -228,7 +228,7 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
           <SelectTrigger className="w-[220px]"><SelectValue placeholder="Vendedor" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os Vendedores</SelectItem>
-            {[...linhas].sort((a, b) => a.nome.localeCompare(b.nome)).map((l) => (
+            {[...linhas].sort((a, b) => (a.nome || "").localeCompare(b.nome || "")).map((l) => (
               <SelectItem key={l.codigo} value={l.codigo}>{l.nome}</SelectItem>
             ))}
           </SelectContent>
