@@ -104,16 +104,16 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
   };
 
   // ---- edição ----
-  const iniciarEdicao = () => { editRef.current = {}; linhas.forEach((l) => { editRef.current[l.codigo] = l.vendaLiquida; }); setEditando(true); };
+  const iniciarEdicao = () => { editRef.current = {}; linhas.forEach((l) => { editRef.current[l.codigo] = l.meta; }); setEditando(true); };
   const salvarEdicao = async () => {
     setSalvando(true);
     try {
-      await criarSnapshot("Edição manual");
+      await criarSnapshot("Edição de metas");
       const mes = meses[0];
-      const payload = Object.entries(editRef.current).map(([codigo, venda]) => ({ codigo, ano, mes, venda_liquida: venda }));
+      const payload = Object.entries(editRef.current).map(([codigo, meta]) => ({ codigo, ano, mes, meta }));
       const { error } = await supabase.from("metas_vendedores").upsert(payload, { onConflict: "codigo,ano,mes" });
       if (error) throw error;
-      toast.success("Valores salvos.");
+      toast.success("Metas salvas.");
       setEditando(false);
       invalidar();
     } catch (e) { toast.error("Erro ao salvar: " + (e as Error).message); }
@@ -318,13 +318,13 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
                     return (
                       <tr key={l.codigo} className="hover:bg-[#fafcf8]">
                         <td className="px-3 py-2 border-b border-[#eef1eb] whitespace-nowrap">{l.nome}</td>
-                        <td className="px-2 py-2 text-right border-b border-[#eef1eb]">{money(l.meta)}</td>
                         <td className="px-2 py-2 text-right border-b border-[#eef1eb] font-semibold">
                           {editando ? (
-                            <input type="number" defaultValue={l.vendaLiquida} onChange={(e) => { editRef.current[l.codigo] = Number(e.target.value) || 0; }}
+                            <input type="number" defaultValue={l.meta} onChange={(e) => { editRef.current[l.codigo] = Number(e.target.value) || 0; }}
                               className="w-24 text-right border border-pasto-amarelo rounded px-1 py-0.5" />
-                          ) : money(l.vendaLiquida)}
+                          ) : money(l.meta)}
                         </td>
+                        <td className="px-2 py-2 text-right border-b border-[#eef1eb] font-semibold">{money(l.vendaLiquida)}</td>
                         <td className="px-2 py-2 text-right border-b border-[#eef1eb]">
                           <span className={`inline-block px-1.5 py-0.5 rounded-full font-semibold ${semCor[sem]}`}>{pct(l.atingimento)}</span>
                         </td>
