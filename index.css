@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root{--background:210 17% 98%;--foreground:200 6% 11%;--muted:100 20% 96%;--muted-foreground:96 8% 45%;--border:150 8% 90%;}
+html,body,#root{height:100%}
+body{margin:0;background:#f8f9fa;color:#191c1d;font-family:"Inter",system-ui,-apple-system,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.font-headline{font-family:"Hanken Grotesk",sans-serif}
+.tnum{font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.card-soft{background:#fff;border:1px solid #e9ecef;border-radius:1rem;box-shadow:0 4px 20px rgba(27,67,50,0.04)}
+@media print{button{display:none!important}}
