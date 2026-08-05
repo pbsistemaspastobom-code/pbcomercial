@@ -93,7 +93,8 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
     const atingimento = meta > 0 ? (venda / meta) * 100 : 0;
     const projValor = dias.passados > 0 ? (venda / dias.passados) * dias.totais : 0;
     const projMeta = meta > 0 ? (projValor / meta) * 100 : 0;
-    return { meta, venda, atingimento, projValor, projMeta };
+    const aindaFalta = Math.max(meta - venda, 0);
+    return { meta, venda, atingimento, projValor, projMeta, aindaFalta };
   }, [linhasFiltradas, dias]);
 
   // ---- snapshot antes de gravar ----
@@ -262,9 +263,10 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
       </div>
 
       {/* Faróis (KPIs) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
         <Farol icone={<Target className="w-4 h-4" />} titulo={`Meta ${MESES[(meses[0] ?? 1) - 1]}`} valor={money(farois.meta)} cor="verde" loading={loading} />
         <Farol icone={<DollarSign className="w-4 h-4" />} titulo="Venda Líquida" valor={money(farois.venda)} loading={loading} />
+        <Farol icone={<Target className="w-4 h-4" />} titulo="Ainda Falta (R$)" valor={money(farois.aindaFalta)} cor={farois.aindaFalta > 0 ? "vermelho" : "verde"} loading={loading} />
         <Farol icone={<Percent className="w-4 h-4" />} titulo="Atingimento" valor={pct(farois.atingimento)} cor={semaforo(farois.atingimento)} loading={loading} />
         <Farol icone={<TrendingUp className="w-4 h-4" />} titulo="Projeção Valor" valor={money(farois.projValor)} loading={loading} />
         <Farol icone={<Target className="w-4 h-4" />} titulo="Projeção Meta %" valor={pct(farois.projMeta)} cor={semaforo(farois.projMeta)} loading={loading} />

@@ -124,6 +124,11 @@ export default function Dashboard() {
               <PizzaLazy data={pieData} />
             </div>
           </div>
+
+          <div className="mt-6">
+            <h3 className={h3}>Consolidado Trimestral</h3>
+            <TrimestralTab ano={ano} />
+          </div>
         </>
       )}
 
