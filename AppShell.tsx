@@ -7,7 +7,6 @@ export type NavKey = "dashboard" | "metas" | "relatorios" | "equipe";
 const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: "dashboard", label: "Painel Geral", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
   { key: "metas", label: "Metas por Vendedor", icon: <Target className="w-[18px] h-[18px]" /> },
-  { key: "relatorios", label: "Relatórios", icon: <BarChart3 className="w-[18px] h-[18px]" /> },
   { key: "equipe", label: "Gerenciar Equipe", icon: <Users className="w-[18px] h-[18px]" /> },
 ];
 
