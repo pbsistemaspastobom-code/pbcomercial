@@ -7,7 +7,6 @@ export type NavKey = "dashboard" | "metas" | "relatorios" | "equipe";
 const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: "dashboard", label: "Painel Geral", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
   { key: "metas", label: "Metas por Vendedor", icon: <Target className="w-[18px] h-[18px]" /> },
-  { key: "relatorios", label: "Relatórios", icon: <BarChart3 className="w-[18px] h-[18px]" /> },
   { key: "equipe", label: "Gerenciar Equipe", icon: <Users className="w-[18px] h-[18px]" /> },
 ];
 
@@ -88,7 +87,7 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
       {/* Conteúdo */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Topo */}
-        <header className="shrink-0 bg-surface/80 backdrop-blur border-b border-[#e9ecef] px-5 lg:px-10 py-4 flex items-center gap-4">
+        <header className="relative z-30 shrink-0 bg-surface/80 backdrop-blur border-b border-[#e9ecef] px-5 lg:px-10 py-4 flex items-center gap-4">
           <button className="lg:hidden text-ink" onClick={() => setAberto(true)}><Menu className="w-6 h-6" /></button>
           <div className="flex-1 min-w-0">
             <h1 className="font-headline text-2xl font-semibold text-primary tracking-tight truncate">{title}</h1>
@@ -98,7 +97,7 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
         </header>
 
         {/* Área rolável */}
-        <main className="flex-1 overflow-auto px-5 lg:px-10 py-6">
+        <main className="relative z-0 flex-1 overflow-auto px-5 lg:px-10 py-6">
           <div className="max-w-[1440px] mx-auto">{children}</div>
         </main>
       </div>
