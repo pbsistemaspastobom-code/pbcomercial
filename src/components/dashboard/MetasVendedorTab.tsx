@@ -257,7 +257,7 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
         </Popover>
         <Button variant="outline" onClick={() => setGerenciarAberto(true)}><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
         <Button variant="outline" onClick={exportar}><Download className="w-4 h-4" /> Exportar Excel</Button>
-        <Button variant="outline" onClick={() => setOculto((o) => !o)}>{oculto ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />} {oculto ? "Mostrar" : "Ocultar"} Valores</Button>
+        <Button variant="outline" onClick={() => setOculto((o) => !o)} title={oculto ? "Mostrar valores" : "Ocultar valores"} className="px-3">{oculto ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.ods" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onArquivo(f); e.target.value = ""; }} />
         {multiMes && <span className="text-xs text-muted-foreground">Somando {meses.length} meses</span>}
       </div>
