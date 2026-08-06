@@ -1,12 +1,13 @@
 // src/components/layout/AppShell.tsx
 import React from "react";
-import { LayoutDashboard, Target, BarChart3, Users, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Target, Trophy, Users, LogOut, Menu, X } from "lucide-react";
 
-export type NavKey = "dashboard" | "metas" | "relatorios" | "equipe";
+export type NavKey = "dashboard" | "metas" | "ranking" | "relatorios" | "equipe";
 
 const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: "dashboard", label: "Painel Geral", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
   { key: "metas", label: "Metas por Vendedor", icon: <Target className="w-[18px] h-[18px]" /> },
+  { key: "ranking", label: "Ranking", icon: <Trophy className="w-[18px] h-[18px]" /> },
   { key: "equipe", label: "Gerenciar Equipe", icon: <Users className="w-[18px] h-[18px]" /> },
 ];
 
