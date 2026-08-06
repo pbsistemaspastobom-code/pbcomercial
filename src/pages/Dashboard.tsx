@@ -7,6 +7,7 @@ import { AppShell, type NavKey } from "@/components/layout/AppShell";
 import { Header } from "@/components/dashboard/Header";
 import { BarrasLazy, PizzaLazy } from "@/components/dashboard/ChartsLazy";
 import { MetasVendedorTab } from "@/components/dashboard/MetasVendedorTab";
+import { RankingTab } from "@/components/dashboard/RankingTab";
 import { TrimestralTab } from "@/components/dashboard/TrimestralTab";
 import { GerenciarEquipeModal } from "@/components/dashboard/GerenciarEquipeModal";
 import { EditarGruposModal } from "@/components/dashboard/EditarGruposModal";
@@ -19,6 +20,7 @@ import { Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Users } from 
 const TITULOS: Record<NavKey, { t: string; s: string }> = {
   dashboard: { t: "Painel Geral", s: "Visão anual consolidada — resultado 2026" },
   metas: { t: "Metas por Vendedor", s: "Acompanhamento individual e por setor" },
+  ranking: { t: "Ranking de Vendedores", s: "Classificação por resultado" },
   relatorios: { t: "Relatórios", s: "Consolidado trimestral e anual" },
   equipe: { t: "Gerenciar Equipe", s: "Vendedores, setores e cadastro" },
 };
@@ -90,7 +92,7 @@ export default function Dashboard() {
 
   const actions = nav === "equipe"
     ? <Button onClick={() => setGerenciar(true)} className="bg-primary hover:bg-primary-dark text-white"><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
-    : (nav === "dashboard" || nav === "metas")
+    : (nav === "dashboard" || nav === "metas" || nav === "ranking")
       ? <Header ano={ano} mes={mesAtual} onMes={setMes} visao={visao} onVisao={setVisao} periodoLabel={periodoLabel} />
       : undefined;
 
@@ -137,6 +139,8 @@ export default function Dashboard() {
       )}
 
       {nav === "relatorios" && <TrimestralTab ano={ano} />}
+
+      {nav === "ranking" && <RankingTab linhas={linhas} periodoLabel={periodoLabel} />}
 
       {nav === "equipe" && (
         <div className={cardCls}>
