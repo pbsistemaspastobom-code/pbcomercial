@@ -9,11 +9,11 @@ import { BarrasLazy, PizzaLazy } from "@/components/dashboard/ChartsLazy";
 import { MetasVendedorTab } from "@/components/dashboard/MetasVendedorTab";
 import { RankingTab } from "@/components/dashboard/RankingTab";
 import { TrimestralTab } from "@/components/dashboard/TrimestralTab";
+import { TrimestralModulo } from "@/components/dashboard/TrimestralModulo";
+import { useTrimestralData } from "@/hooks/useTrimestralData";
 import { GerenciarEquipeModal } from "@/components/dashboard/GerenciarEquipeModal";
-import { EditarGruposModal } from "@/components/dashboard/EditarGruposModal";
 import { useMetasData } from "@/hooks/useMetasData";
-import { useGruposData } from "@/hooks/useGruposData";
-import { agregarGrupos } from "@/lib/financeiro";
+import { useResumoAnual } from "@/hooks/useResumoAnual";
 import { brl, pct, MESES, MESES_LONGO, semaforo } from "@/lib/formato";
 import { Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Users } from "lucide-react";
 
@@ -21,6 +21,7 @@ const TITULOS: Record<NavKey, { t: string; s: string }> = {
   dashboard: { t: "Painel Geral", s: "Visão anual consolidada — resultado 2026" },
   metas: { t: "Metas por Vendedor", s: "Acompanhamento individual e por setor" },
   ranking: { t: "Ranking de Vendedores", s: "Classificação por resultado" },
+  trimestral: { t: "Trimestral", s: "Resultado acumulado por trimestre (Q1–Q4)" },
   relatorios: { t: "Relatórios", s: "Consolidado trimestral e anual" },
   equipe: { t: "Gerenciar Equipe", s: "Vendedores, setores e cadastro" },
 };
@@ -49,13 +50,13 @@ export default function Dashboard() {
   const [mesesSel, setMesesSel] = useState<number[]>([new Date().getMonth() + 1]);
   const [visao, setVisao] = useState<"mensal" | "anual">("mensal");
   const [gerenciar, setGerenciar] = useState(false);
-  const [editarGrupos, setEditarGrupos] = useState(false);
 
   const meses = useMemo(() => (visao === "anual" ? ANUAL : mesesSel), [visao, mesesSel]);
   const multiMes = meses.length > 1;
 
   const { linhas, todos, dias, isLoading, invalidar } = useMetasData(ano, meses);
-  const { series: gruposSeries, invalidar: invalidarGrupos } = useGruposData(ano);
+  const resumo = useResumoAnual(ano);
+  const tridata = useTrimestralData(ano);
 
   useEffect(() => {
     const ric: (cb: () => void) => number =
@@ -87,8 +88,8 @@ export default function Dashboard() {
   const tDias = anualView ? "Total Dias Úteis (Período)" : "Total Dias Úteis";
 
   // gráficos anuais
-  const barData = useMemo(() => MESES.map((m, i) => ({ label: m, Meta: gruposSeries.reduce((s, g) => s + g.metas[i], 0), Faturamento: gruposSeries.reduce((s, g) => s + g.realizado[i], 0) })), [gruposSeries]);
-  const pieData = useMemo(() => agregarGrupos(ANUAL, gruposSeries).map((g) => ({ name: g.grupo, value: g.lucro })), [gruposSeries]);
+  const barData = useMemo(() => resumo.porMes.map((m) => ({ label: MESES[m.mes - 1], Meta: m.meta, Faturamento: m.venda })), [resumo.porMes]);
+  const pieData = useMemo(() => resumo.porSetor.map((x) => ({ name: x.setor, value: x.venda })), [resumo.porSetor]);
 
   const actions = nav === "equipe"
     ? <Button onClick={() => setGerenciar(true)} className="bg-primary hover:bg-primary-dark text-white"><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
@@ -120,8 +121,7 @@ export default function Dashboard() {
             <div className={cardCls}><h3 className={h3}>Meta vs Faturamento (mês a mês)</h3><BarrasLazy data={barData} /></div>
             <div className={cardCls}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className={`${h3} mb-0`}>Lucro por grupo</h3>
-                <Button variant="outline" size="sm" onClick={() => setEditarGrupos(true)}>Editar Grupos</Button>
+                <h3 className={`${h3} mb-0`}>Venda por Setor</h3>
               </div>
               <PizzaLazy data={pieData} />
             </div>
@@ -129,7 +129,7 @@ export default function Dashboard() {
 
           <div className="mt-6">
             <h3 className={h3}>Consolidado Trimestral</h3>
-            <TrimestralTab ano={ano} />
+            <TrimestralTab tris={tridata.porTri} ano={ano} />
           </div>
         </>
       )}
@@ -138,9 +138,9 @@ export default function Dashboard() {
         <MetasVendedorTab linhas={linhas} ano={ano} meses={meses} multiMes={multiMes} onMeses={setMesesSel} invalidar={invalidar} loading={isLoading} dias={dias} todos={todos} />
       )}
 
-      {nav === "relatorios" && <TrimestralTab ano={ano} />}
-
       {nav === "ranking" && <RankingTab linhas={linhas} periodoLabel={periodoLabel} />}
+
+      {nav === "trimestral" && <TrimestralModulo ano={ano} todos={todos} />}
 
       {nav === "equipe" && (
         <div className={cardCls}>
@@ -167,7 +167,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <EditarGruposModal open={editarGrupos} onOpenChange={setEditarGrupos} ano={ano} mes={mesAtual} series={gruposSeries} onSaved={invalidarGrupos} />
       <GerenciarEquipeModal open={gerenciar} onOpenChange={setGerenciar} vendedores={todos} onSaved={invalidar} />
     </AppShell>
   );
