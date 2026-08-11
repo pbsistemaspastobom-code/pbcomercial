@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Pencil, Upload, Undo2, History, Sigma, Users, Download, EyeOff, Eye, Target, DollarSign, Percent, TrendingUp, Calendar, Clock } from "lucide-react";
+import { Pencil, Upload, Undo2, History, Sigma, Users, Download, EyeOff, Eye, Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Trash2 } from "lucide-react";
 import { brl2, pct, MESES, MESES_LONGO, primeiroNome, semaforo } from "@/lib/formato";
 import { BarrasVendedorLazy, PizzaLazy } from "@/components/dashboard/ChartsLazy";
 import { SETORES } from "@/data/planejamento2026";
@@ -99,8 +99,11 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
 
   // ---- snapshot antes de gravar ----
   const criarSnapshot = async (descricao: string) => {
-    const snap = linhas.map((l) => ({ codigo: l.codigo, venda: l.vendaLiquida }));
-    await supabase.from("metas_historico").insert({ ano, descricao, snapshot: snap });
+    try {
+      const snap = linhas.map((l) => ({ codigo: l.codigo, meta: l.meta, venda: l.vendaLiquida }));
+      const { error } = await supabase.from("metas_historico").insert({ ano, descricao, snapshot: snap });
+      if (error) console.warn("snapshot falhou:", error.message);
+    } catch (e) { console.warn("snapshot erro:", (e as Error).message); }
   };
 
   // ---- edição ----
@@ -171,10 +174,10 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
     try {
       const { data, error } = await supabase.from("metas_historico").select("id, snapshot").eq("ano", ano).order("created_at", { ascending: false }).limit(1);
       if (error) throw error;
-      const snap = data?.[0]?.snapshot as { codigo: string; venda: number }[] | undefined;
+      const snap = data?.[0]?.snapshot as { codigo: string; meta?: number; venda?: number }[] | undefined;
       if (!snap) { toast.info("Sem snapshot para restaurar."); return; }
       const mes = meses[0];
-      const payload = snap.map((s) => ({ codigo: s.codigo, ano, mes, venda_liquida: s.venda }));
+      const payload = snap.map((s) => ({ codigo: s.codigo, ano, mes, meta: s.meta ?? 0, venda_liquida: s.venda ?? 0 }));
       const { error: e2 } = await supabase.from("metas_vendedores").upsert(payload, { onConflict: "codigo,ano,mes" });
       if (e2) throw e2;
       toast.success("Importação desfeita.");
@@ -191,13 +194,29 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
       setHistAberto(true);
     } catch (e) { toast.error("Erro ao carregar histórico: " + (e as Error).message); }
   };
+  const apagarSnapshot = async (id: string) => {
+    try {
+      const { error } = await supabase.from("metas_historico").delete().eq("id", id);
+      if (error) throw error;
+      setSnapshots((cur) => cur.filter((s) => s.id !== id));
+      toast.success("Snapshot apagado.");
+    } catch (e) { toast.error("Erro ao apagar: " + (e as Error).message); }
+  };
+  const apagarTodosSnapshots = async () => {
+    try {
+      const { error } = await supabase.from("metas_historico").delete().eq("ano", ano);
+      if (error) throw error;
+      setSnapshots([]);
+      toast.success("Histórico apagado.");
+    } catch (e) { toast.error("Erro ao apagar: " + (e as Error).message); }
+  };
   const restaurarSnapshot = async (id: string) => {
     try {
       const { data, error } = await supabase.from("metas_historico").select("snapshot").eq("id", id).single();
       if (error) throw error;
-      const snap = data?.snapshot as { codigo: string; venda: number }[];
+      const snap = data?.snapshot as { codigo: string; meta?: number; venda?: number }[];
       const mes = meses[0];
-      const { error: e2 } = await supabase.from("metas_vendedores").upsert(snap.map((s) => ({ codigo: s.codigo, ano, mes, venda_liquida: s.venda })), { onConflict: "codigo,ano,mes" });
+      const { error: e2 } = await supabase.from("metas_vendedores").upsert(snap.map((s) => ({ codigo: s.codigo, ano, mes, meta: s.meta ?? 0, venda_liquida: s.venda ?? 0 })), { onConflict: "codigo,ano,mes" });
       if (e2) throw e2;
       toast.success("Snapshot restaurado.");
       setHistAberto(false);
@@ -371,14 +390,18 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
           </DialogHeader>
           <div className="max-h-80 overflow-auto divide-y">
             {snapshots.map((s) => (
-              <div key={s.id} className="flex items-center justify-between py-2 text-sm">
-                <span>{new Date(s.created_at).toLocaleString("pt-BR")}<div className="text-xs text-muted-foreground">{s.descricao}</div></span>
+              <div key={s.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                <span className="min-w-0 flex-1">{new Date(s.created_at).toLocaleString("pt-BR")}<div className="text-xs text-muted-foreground truncate">{s.descricao}</div></span>
                 <Button size="sm" variant="outline" onClick={() => restaurarSnapshot(s.id)}>Restaurar</Button>
+                <Button size="sm" variant="outline" className="text-[#b12318] px-2" title="Apagar" onClick={() => apagarSnapshot(s.id)}><Trash2 className="w-4 h-4" /></Button>
               </div>
             ))}
             {!snapshots.length && <div className="py-4 text-muted-foreground text-sm">Nenhum snapshot ainda.</div>}
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setHistAberto(false)}>Fechar</Button></DialogFooter>
+          <DialogFooter className="justify-between">
+            {snapshots.length > 0 && <Button variant="outline" className="text-[#b12318]" onClick={apagarTodosSnapshots}>Apagar todos</Button>}
+            <Button variant="outline" onClick={() => setHistAberto(false)}>Fechar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
