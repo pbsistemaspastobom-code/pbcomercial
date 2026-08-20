@@ -42,6 +42,7 @@ export function useTrimestralData(ano: number) {
 
   const linhas = useCallback((tri: number): LinhaTri[] => {
     const codes = new Set<string>([...Object.keys(cfgMap), ...Object.keys(mapa[tri] ?? {})]);
+    codes.delete("__GERAL__");
     return [...codes].filter((c) => cfgMap[c]?.ativo ?? true).map((codigo) => {
       const d = mapa[tri]?.[codigo] ?? { meta: 0, venda: 0 };
       const info = cfgMap[codigo] ?? { nome: codigo, setor: "Outros" };
@@ -49,10 +50,13 @@ export function useTrimestralData(ano: number) {
     }).sort((a, b) => b.venda - a.venda);
   }, [cfgMap, mapa]);
 
+  // meta GERAL do trimestre (editável, guardada no código sentinela __GERAL__)
+  const metaGeral = useCallback((tri: number) => mapa[tri]?.["__GERAL__"]?.meta ?? 0, [mapa]);
+
   const porTri = useMemo(() => [1, 2, 3, 4].map((t) => {
-    const vals = Object.values(mapa[t] ?? {});
-    const meta = vals.reduce((s, v) => s + v.meta, 0);
+    const vals = Object.entries(mapa[t] ?? {}).filter(([c]) => c !== "__GERAL__").map(([, v]) => v);
     const venda = vals.reduce((s, v) => s + v.venda, 0);
+    const meta = mapa[t]?.["__GERAL__"]?.meta ?? 0; // meta geral, NÃO a soma
     return { tri: t, nome: `Q${t}`, meta, venda, atingimento: meta > 0 ? (venda / meta) * 100 : 0 };
   }), [mapa]);
 
@@ -63,5 +67,5 @@ export function useTrimestralData(ano: number) {
     return () => window.removeEventListener("trimestral-changed", h);
   }, [qc]);
 
-  return { porTri, linhas, isLoading: query.isLoading, invalidar };
+  return { porTri, linhas, metaGeral, isLoading: query.isLoading, invalidar };
 }
