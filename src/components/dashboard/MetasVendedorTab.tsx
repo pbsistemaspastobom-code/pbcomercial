@@ -80,11 +80,19 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
       .map((l) => ({ label: primeiroNome(l.nome), Meta: l.meta, Venda: l.vendaLiquida })),
     [linhasFiltradas]
   );
-  const pieData = useMemo(
-    () => [...linhasFiltradas].filter((l) => l.meta > 0).sort((a, b) => b.meta - a.meta)
-      .map((l) => ({ name: primeiroNome(l.nome), value: l.meta })),
-    [linhasFiltradas]
-  );
+  const umVendedor = linhasFiltradas.length === 1;
+  const pieTitulo = umVendedor ? "Atingimento (Venda x Falta)" : "Distribuição de Metas";
+  const pieData = useMemo(() => {
+    if (umVendedor) {
+      const l = linhasFiltradas[0];
+      return [
+        { name: "Venda Líquida", value: l.vendaLiquida },
+        { name: "Ainda falta", value: Math.max(l.meta - l.vendaLiquida, 0) },
+      ].filter((x) => x.value > 0);
+    }
+    return [...linhasFiltradas].filter((l) => l.meta > 0).sort((a, b) => b.meta - a.meta)
+      .map((l) => ({ name: primeiroNome(l.nome), value: l.meta }));
+  }, [linhasFiltradas, umVendedor]);
 
   // faróis (KPIs) do período/filtro
   const farois = useMemo(() => {
@@ -146,7 +154,7 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
         const escolha = assign[r.nome];
         if (!escolha || escolha === "ignorar") return;
         if (escolha === "__criar__") {
-          const codigo = "NV" + (seq++).toString().slice(-8);
+          const codigo = r.codigo || ("NV" + (seq++).toString().slice(-8));
           criar.push({ codigo, nome: r.nome.toUpperCase(), setor: "Outros", ativo: true, updated_at: agora });
           soma[codigo] = (soma[codigo] ?? 0) + r.valor;
         } else {
@@ -303,7 +311,7 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
           <BarrasVendedorLazy data={barData} />
         </div>
         <div className="rounded-2xl border border-border bg-white p-5">
-          <h3 className="text-pasto-escuro font-semibold mb-3">Distribuição de Metas</h3>
+          <h3 className="text-pasto-escuro font-semibold mb-3">{pieTitulo}</h3>
           <PizzaLazy data={pieData} />
         </div>
       </div>

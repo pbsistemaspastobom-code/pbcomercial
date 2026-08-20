@@ -13,8 +13,11 @@ import { brl2, pct, semaforo } from "@/lib/formato";
 const semCor = { verde: "text-[#1f7a1a]", amarelo: "text-[#8a6d00]", vermelho: "text-[#d0342c]" };
 
 export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorEfetivo[] }) {
-  const { porTri, linhas, invalidar } = useTrimestralData(ano);
+  const { porTri, linhas, metaGeral, invalidar } = useTrimestralData(ano);
   const [tri, setTri] = useState(1);
+  const [editandoMeta, setEditandoMeta] = useState(false);
+  const [metaInput, setMetaInput] = useState(0);
+  const [salvandoMeta, setSalvandoMeta] = useState(false);
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [oculto, setOculto] = useState(false);
@@ -60,7 +63,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
       importResult.naoReconhecidos.forEach((r) => {
         const e = assign[r.nome];
         if (!e || e === "ignorar") return;
-        if (e === "__criar__") { const codigo = "NV" + (seq++).toString().slice(-8); criar.push({ codigo, nome: r.nome.toUpperCase(), setor: "Outros", ativo: true, updated_at: new Date().toISOString() }); soma[codigo] = (soma[codigo] ?? 0) + r.valor; }
+        if (e === "__criar__") { const codigo = r.codigo || ("NV" + (seq++).toString().slice(-8)); criar.push({ codigo, nome: r.nome.toUpperCase(), setor: "Outros", ativo: true, updated_at: new Date().toISOString() }); soma[codigo] = (soma[codigo] ?? 0) + r.valor; }
         else soma[e] = (soma[e] ?? 0) + r.valor;
       });
       if (criar.length) { const { error } = await supabase.from("vendedores_config").upsert(criar, { onConflict: "codigo" }); if (error) throw error; }
@@ -77,6 +80,23 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
       invalidar();
     } catch (e) { toast.error("Erro ao gravar: " + (e as Error).message); }
     finally { setGravando(false); }
+  };
+
+  const abrirEdicaoMeta = () => { setMetaInput(metaGeral(tri)); setEditandoMeta(true); };
+  const salvarMetaGeral = async () => {
+    setSalvandoMeta(true);
+    try {
+      const { error } = await supabase.from("trimestral_dados").upsert(
+        [{ codigo: "__GERAL__", ano, trimestre: tri, meta: metaInput, venda_liquida: 0, updated_at: new Date().toISOString() }],
+        { onConflict: "codigo,ano,trimestre" }
+      );
+      if (error) throw error;
+      toast.success(`Meta geral do Q${tri} salva.`);
+      setEditandoMeta(false);
+      window.dispatchEvent(new CustomEvent("trimestral-changed"));
+      invalidar();
+    } catch (e) { toast.error("Erro ao salvar meta: " + (e as Error).message); }
+    finally { setSalvandoMeta(false); }
   };
 
   const exportar = () => {
@@ -118,7 +138,21 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
 
       {/* KPIs do trimestre */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Meta Q{tri}</div><div className="font-headline text-xl font-bold text-primary mt-1 tnum">{money(resumo.meta)}</div></div>
+        <div className="card-soft p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] uppercase text-ink-mute font-semibold">Meta Geral Q{tri}</div>
+            {!editandoMeta && <button onClick={abrirEdicaoMeta} className="text-primary" title="Editar meta geral"><Pencil className="w-3.5 h-3.5" /></button>}
+          </div>
+          {editandoMeta ? (
+            <div className="flex items-center gap-1 mt-1">
+              <input type="number" value={metaInput} onChange={(e) => setMetaInput(Number(e.target.value) || 0)} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5 text-sm" />
+              <button onClick={salvarMetaGeral} disabled={salvandoMeta} className="text-[11px] bg-primary text-white rounded px-2 py-1">{salvandoMeta ? "..." : "OK"}</button>
+              <button onClick={() => setEditandoMeta(false)} className="text-[11px] text-ink-mute px-1">✕</button>
+            </div>
+          ) : (
+            <div className="font-headline text-xl font-bold text-primary mt-1 tnum">{money(resumo.meta)}</div>
+          )}
+        </div>
         <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Venda Líquida</div><div className="font-headline text-xl font-bold text-primary mt-1 tnum">{money(resumo.venda)}</div></div>
         <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Atingimento</div><div className={`font-headline text-xl font-bold mt-1 tnum ${semCor[semaforo(resumo.atingimento)]}`}>{pct(resumo.atingimento)}</div></div>
         <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Ainda Falta</div><div className="font-headline text-xl font-bold text-[#d0342c] mt-1 tnum">{money(Math.max(resumo.meta - resumo.venda, 0))}</div></div>
