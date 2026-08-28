@@ -94,34 +94,13 @@ export function criarMatcher(vendedores: Vend[]): Matcher {
     if (codigoSheet && porCodigo.has(codigoSheet)) return { codigo: codigoSheet, combinado: false };
     const n = norm(limparCodigo(nomeRaw));            // 1) limpa: código, acentos, espaços, minúsculo
     if (!n) return null;
-    // 2) alias exato / combine exato
+    // 2) alias exato / combine exato (se houver)
     if (ALIASES[n]) return { codigo: ALIASES[n], combinado: false };
     if (COMBINE_VENDORS[n]) return { codigo: COMBINE_VENDORS[n], combinado: true };
-    // 3) nome cadastrado (banco) exato
+    // 3) nome cadastrado (banco) EXATO
     const exato = vendedores.find((v) => norm(v.nome) === n);
     if (exato) return { codigo: exato.codigo, combinado: false };
-    // 4a) um contém o outro — só se o trecho tiver 2+ partes (evita 1º nome grudar em quem já existe)
-    const nTokens = n.split(" ").filter((t) => t.length >= 2);
-    const contido = vendedores.find((v) => {
-      const vn = norm(v.nome);
-      if (vn === n) return true;
-      const curto = n.length <= vn.length ? n : vn;
-      const longo = curto === n ? vn : n;
-      return longo.includes(curto) && curto.split(" ").filter((t) => t.length >= 2).length >= 2;
-    });
-    if (contido) return { codigo: contido.codigo, combinado: false };
-    // 4b) por tokens (tolera troca de letra) — exige >=2 partes casadas (nome único vai pra correlação)
-    let melhor: { codigo: string; score: number } | null = null;
-    for (const v of vendedores) {
-      const vtk = norm(v.nome).split(" ").filter((t) => t.length >= 2);
-      let score = 0;
-      for (const t of nTokens) if (vtk.some((x) => tokenSimilar(t, x))) score++;
-      if (score >= 2 && (!melhor || score > melhor.score)) melhor = { codigo: v.codigo, score };
-    }
-    if (melhor) return { codigo: melhor.codigo, combinado: false };
-    // 5) alias/combine por conteúdo parcial (>=3)
-    for (const [ali, cod] of Object.entries(ALIASES)) if (ali.length >= 3 && (n.includes(ali) || ali.includes(n))) return { codigo: cod, combinado: false };
-    for (const [ali, cod] of Object.entries(COMBINE_VENDORS)) if (ali.length >= 3 && (n.includes(ali) || ali.includes(n))) return { codigo: cod, combinado: true };
+    // Qualquer nome diferente (não idêntico e sem código) SEMPRE vai para a correlação manual.
     return null;
   };
   return { casar, nomePorCodigo };
