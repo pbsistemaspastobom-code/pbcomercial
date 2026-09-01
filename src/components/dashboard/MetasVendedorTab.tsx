@@ -39,9 +39,11 @@ interface Props {
   loading: boolean;
   dias: { totais: number; passados: number; restantes: number };
   todos: VendedorEfetivo[];
+  podeEditar?: boolean;
+  ehVendedor?: boolean;
 }
 
-export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, ano, meses, multiMes, onMeses, invalidar, loading, dias, todos }: Props) {
+export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, ano, meses, multiMes, onMeses, invalidar, loading, dias, todos, podeEditar = true, ehVendedor = false }: Props) {
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [oculto, setOculto] = useState(false);
@@ -252,28 +254,30 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
     <div>
       {/* Topo: filtro de vendedor + ações */}
       <div className="flex flex-wrap gap-2 mb-5 items-center">
-        <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
-          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Vendedor" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos os Vendedores</SelectItem>
-            {[...linhas].sort((a, b) => (a.nome || "").localeCompare(b.nome || "")).map((l) => (
-              <SelectItem key={l.codigo} value={l.codigo}>{l.nome}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {!ehVendedor && (
+          <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Vendedores</SelectItem>
+              {[...linhas].sort((a, b) => (a.nome || "").localeCompare(b.nome || "")).map((l) => (
+                <SelectItem key={l.codigo} value={l.codigo}>{l.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
-        {!editando ? (
+        {podeEditar && (!editando ? (
           <Button variant="outline" disabled={multiMes} onClick={iniciarEdicao}><Pencil className="w-4 h-4" /> Editar Valores</Button>
         ) : (
           <>
             <Button onClick={salvarEdicao} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</Button>
             <Button variant="outline" onClick={() => setEditando(false)} disabled={salvando}>Cancelar</Button>
           </>
-        )}
-        <Button variant="outline" disabled={multiMes || editando} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> Importar Planilha</Button>
-        <Button variant="outline" onClick={desfazer}><Undo2 className="w-4 h-4" /> Desfazer</Button>
-        <Button variant="outline" onClick={abrirHistorico}><History className="w-4 h-4" /> Histórico</Button>
-        <Popover trigger={<Button variant="outline"><Sigma className="w-4 h-4" /> Somar Meses</Button>} className="w-48">
+        ))}
+        {podeEditar && <Button variant="outline" disabled={multiMes || editando} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> Importar Planilha</Button>}
+        {podeEditar && <Button variant="outline" onClick={desfazer}><Undo2 className="w-4 h-4" /> Desfazer</Button>}
+        {podeEditar && <Button variant="outline" onClick={abrirHistorico}><History className="w-4 h-4" /> Histórico</Button>}
+        {!ehVendedor && <Popover trigger={<Button variant="outline"><Sigma className="w-4 h-4" /> Somar Meses</Button>} className="w-48">
           <div className="grid grid-cols-3 gap-1">
             {MESES.map((m, i) => (
               <label key={m} className="flex items-center gap-1 text-xs">
@@ -281,8 +285,8 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
               </label>
             ))}
           </div>
-        </Popover>
-        <Button variant="outline" onClick={() => setGerenciarAberto(true)}><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
+        </Popover>}
+        {podeEditar && <Button variant="outline" onClick={() => setGerenciarAberto(true)}><Users className="w-4 h-4" /> Gerenciar Equipe</Button>}
         <Button variant="outline" onClick={exportar}><Download className="w-4 h-4" /> Exportar Excel</Button>
         <Button variant="outline" onClick={() => setOculto((o) => !o)} title={oculto ? "Mostrar valores" : "Ocultar valores"} className="px-3">{oculto ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.ods" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onArquivo(f); e.target.value = ""; }} />
