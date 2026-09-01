@@ -1,15 +1,18 @@
 // src/components/layout/AppShell.tsx
 import React from "react";
-import { LayoutDashboard, Target, Trophy, BarChart3, Users, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Target, Trophy, BarChart3, Users, UserCog, LogOut, Menu } from "lucide-react";
+import type { Papel } from "@/auth";
+import { rotuloPapel } from "@/auth";
 
-export type NavKey = "dashboard" | "metas" | "ranking" | "trimestral" | "relatorios" | "equipe";
+export type NavKey = "dashboard" | "metas" | "ranking" | "trimestral" | "relatorios" | "equipe" | "usuarios";
 
-const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
-  { key: "dashboard", label: "Painel Geral", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
-  { key: "metas", label: "Metas por Vendedor", icon: <Target className="w-[18px] h-[18px]" /> },
-  { key: "ranking", label: "Ranking", icon: <Trophy className="w-[18px] h-[18px]" /> },
-  { key: "trimestral", label: "Trimestral", icon: <BarChart3 className="w-[18px] h-[18px]" /> },
-  { key: "equipe", label: "Gerenciar Equipe", icon: <Users className="w-[18px] h-[18px]" /> },
+const NAV: { key: NavKey; label: string; icon: React.ReactNode; papeis: Papel[] }[] = [
+  { key: "dashboard", label: "Painel Geral", icon: <LayoutDashboard className="w-[18px] h-[18px]" />, papeis: ["admin", "gerencia", "supervisao", "vendedor"] },
+  { key: "metas", label: "Metas por Vendedor", icon: <Target className="w-[18px] h-[18px]" />, papeis: ["admin", "gerencia", "supervisao", "vendedor"] },
+  { key: "ranking", label: "Ranking", icon: <Trophy className="w-[18px] h-[18px]" />, papeis: ["admin", "gerencia", "supervisao"] },
+  { key: "trimestral", label: "Trimestral", icon: <BarChart3 className="w-[18px] h-[18px]" />, papeis: ["admin", "gerencia", "supervisao"] },
+  { key: "equipe", label: "Gerenciar Equipe", icon: <Users className="w-[18px] h-[18px]" />, papeis: ["admin", "gerencia", "supervisao"] },
+  { key: "usuarios", label: "Usuários", icon: <UserCog className="w-[18px] h-[18px]" />, papeis: ["admin"] },
 ];
 
 interface Props {
@@ -19,10 +22,14 @@ interface Props {
   subtitle?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
+  papel: Papel;
+  usuarioNome: string;
+  onLogout: () => void;
 }
 
-export function AppShell({ active, onNavigate, title, subtitle, actions, children }: Props) {
+export function AppShell({ active, onNavigate, title, subtitle, actions, children, papel, usuarioNome, onLogout }: Props) {
   const [aberto, setAberto] = React.useState(false);
+  const itens = NAV.filter((n) => n.papeis.includes(papel));
 
   const Sidebar = (
     <aside className="w-[280px] shrink-0 bg-primary-dark text-white flex flex-col h-full">
@@ -36,17 +43,17 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
       {/* Card usuário */}
       <div className="px-4">
         <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gold/90 text-primary-dark font-bold flex items-center justify-center">PB</div>
+          <div className="w-10 h-10 rounded-full bg-gold/90 text-primary-dark font-bold flex items-center justify-center uppercase">{usuarioNome.slice(0, 2)}</div>
           <div className="leading-tight min-w-0">
-            <div className="font-semibold text-sm truncate">Portal Comercial</div>
-            <div className="text-[11px] text-white/60 truncate">Pasto Bom · Rede do Campo</div>
+            <div className="font-semibold text-sm truncate">{usuarioNome}</div>
+            <div className="text-[11px] text-white/60 truncate">{rotuloPapel(papel)}</div>
           </div>
         </div>
       </div>
 
       {/* Navegação */}
       <nav className="flex-1 px-4 py-5 space-y-1">
-        {NAV.map((item) => {
+        {itens.map((item) => {
           const on = active === item.key;
           return (
             <button
@@ -66,9 +73,9 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
 
       {/* Rodapé */}
       <div className="px-4 pb-5">
-        <div className="rounded-lg border border-white/10 px-4 py-3 text-white/60 text-xs flex items-center gap-2">
-          <LogOut className="w-4 h-4" /> Sistema sem login (acesso interno)
-        </div>
+        <button onClick={onLogout} className="w-full rounded-lg border border-white/10 hover:bg-white/5 px-4 py-3 text-white/70 hover:text-white text-sm flex items-center gap-2 transition-colors">
+          <LogOut className="w-4 h-4" /> Sair
+        </button>
       </div>
     </aside>
   );
