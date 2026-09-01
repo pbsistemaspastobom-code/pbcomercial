@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, KeyRound } from "lucide-react";
 import type { VendedorEfetivo } from "@/hooks/useMetasData";
 import { rotuloPapel, type Papel } from "@/auth";
 
@@ -44,6 +44,22 @@ export function UsuariosTab({ vendedores }: { vendedores: VendedorEfetivo[] }) {
     else { setLista((c) => c.filter((x) => x.usuario !== usuario)); toast.success("Usuário excluído."); }
   };
 
+  const alternarAtivo = async (u: UsuarioRow) => {
+    if (u.usuario.toLowerCase() === "admin" && u.ativo) { toast.error("Não é possível inativar o admin principal."); return; }
+    const { error } = await supabase.rpc("definir_ativo", { p_usuario: u.usuario, p_ativo: !u.ativo });
+    if (error) toast.error("Erro: " + error.message);
+    else { setLista((c) => c.map((x) => (x.usuario === u.usuario ? { ...x, ativo: !u.ativo } : x))); toast.success(u.ativo ? "Usuário inativado." : "Usuário ativado."); }
+  };
+
+  const resetarSenha = async (usuario: string) => {
+    const nova = window.prompt(`Nova senha para "${usuario}":`);
+    if (nova == null) return;
+    if (!nova.trim()) { toast.error("Senha vazia."); return; }
+    const { error } = await supabase.rpc("redefinir_senha", { p_usuario: usuario, p_senha: nova });
+    if (error) toast.error("Erro: " + error.message);
+    else toast.success("Senha redefinida.");
+  };
+
   const nomeVend = (cod: string | null) => (cod ? vendedores.find((v) => v.codigo === cod)?.nome ?? cod : "—");
 
   return (
@@ -73,22 +89,29 @@ export function UsuariosTab({ vendedores }: { vendedores: VendedorEfetivo[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-ink-mute text-left border-b border-[#e9ecef]">
-                <th className="py-2.5">Usuário</th><th className="py-2.5">Papel</th><th className="py-2.5">Vendedor vinculado</th><th className="py-2.5 text-center">Ação</th>
+                <th className="py-2.5">Usuário</th><th className="py-2.5">Papel</th><th className="py-2.5">Vendedor vinculado</th><th className="py-2.5 text-center">Status</th><th className="py-2.5 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {carregando ? <tr><td colSpan={4} className="py-4 text-ink-mute">Carregando…</td></tr> :
+              {carregando ? <tr><td colSpan={5} className="py-4 text-ink-mute">Carregando…</td></tr> :
                 lista.map((u) => (
                   <tr key={u.usuario} className="border-b border-[#f1f3f4]">
                     <td className="py-3 font-medium">{u.usuario}</td>
                     <td className="py-3">{rotuloPapel(u.papel)}</td>
                     <td className="py-3 text-ink-mute">{nomeVend(u.codigo_vendedor)}</td>
                     <td className="py-3 text-center">
-                      <button onClick={() => excluir(u.usuario)} className="text-[#b12318]" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${u.ativo ? "bg-[#e2f3e0] text-[#1f7a1a]" : "bg-[#eceeef] text-ink-mute"}`}>{u.ativo ? "ATIVO" : "INATIVO"}</span>
+                    </td>
+                    <td className="py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => alternarAtivo(u)} className="text-xs px-2 py-1 rounded border border-border hover:bg-[#f0f4ee]" title={u.ativo ? "Inativar" : "Ativar"}>{u.ativo ? "Inativar" : "Ativar"}</button>
+                        <button onClick={() => resetarSenha(u.usuario)} className="text-primary p-1.5 rounded hover:bg-[#f0f4ee]" title="Redefinir senha"><KeyRound className="w-4 h-4" /></button>
+                        <button onClick={() => excluir(u.usuario)} className="text-[#b12318] p-1.5 rounded hover:bg-[#fbe0dd]" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-              {!carregando && !lista.length && <tr><td colSpan={4} className="py-4 text-ink-mute">Nenhum usuário.</td></tr>}
+              {!carregando && !lista.length && <tr><td colSpan={5} className="py-4 text-ink-mute">Nenhum usuário.</td></tr>}
             </tbody>
           </table>
         </div>
