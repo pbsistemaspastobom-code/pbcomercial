@@ -13,6 +13,8 @@ import { TrimestralModulo } from "@/components/dashboard/TrimestralModulo";
 import { useTrimestralData } from "@/hooks/useTrimestralData";
 import { GerenciarEquipeModal } from "@/components/dashboard/GerenciarEquipeModal";
 import { useMetasData } from "@/hooks/useMetasData";
+import { UsuariosTab } from "@/components/dashboard/UsuariosTab";
+import { useAuth, usePermissoes } from "@/auth";
 import { useResumoAnual } from "@/hooks/useResumoAnual";
 import { brl, pct, MESES, MESES_LONGO, semaforo } from "@/lib/formato";
 import { Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Users } from "lucide-react";
@@ -22,6 +24,7 @@ const TITULOS: Record<NavKey, { t: string; s: string }> = {
   metas: { t: "Metas por Vendedor", s: "Acompanhamento individual e por setor" },
   ranking: { t: "Ranking de Vendedores", s: "Classificação por resultado" },
   trimestral: { t: "Trimestral", s: "Resultado acumulado por trimestre (Q1–Q4)" },
+  usuarios: { t: "Usuários", s: "Cadastro de acessos e papéis" },
   relatorios: { t: "Relatórios", s: "Consolidado trimestral e anual" },
   equipe: { t: "Gerenciar Equipe", s: "Vendedores, setores e cadastro" },
 };
@@ -45,6 +48,8 @@ function Farol({ icone, titulo, valor, cor, destaque, amarelo, loading }: { icon
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const ano = 2026;
+  const { user, logout } = useAuth();
+  const perm = usePermissoes();
   const [nav, setNav] = useState<NavKey>("dashboard");
   const [mesAtual, setMesAtual] = useState(new Date().getMonth() + 1);
   const [mesesSel, setMesesSel] = useState<number[]>([new Date().getMonth() + 1]);
@@ -54,7 +59,8 @@ export default function Dashboard() {
   const meses = useMemo(() => (visao === "anual" ? ANUAL : mesesSel), [visao, mesesSel]);
   const multiMes = meses.length > 1;
 
-  const { linhas, todos, dias, isLoading, invalidar } = useMetasData(ano, meses);
+  const { linhas: linhasAll, todos, dias, isLoading, invalidar } = useMetasData(ano, meses);
+  const linhas = perm.ehVendedor && perm.codigoVendedor ? linhasAll.filter((l) => l.codigo === perm.codigoVendedor) : linhasAll;
   const resumo = useResumoAnual(ano);
   const tridata = useTrimestralData(ano);
 
@@ -92,7 +98,7 @@ export default function Dashboard() {
   const pieData = useMemo(() => resumo.porSetor.map((x) => ({ name: x.setor, value: x.venda })), [resumo.porSetor]);
 
   const actions = nav === "equipe"
-    ? <Button onClick={() => setGerenciar(true)} className="bg-primary hover:bg-primary-dark text-white"><Users className="w-4 h-4" /> Gerenciar Equipe</Button>
+    ? (perm.podeEditar ? <Button onClick={() => setGerenciar(true)} className="bg-primary hover:bg-primary-dark text-white"><Users className="w-4 h-4" /> Gerenciar Equipe</Button> : undefined)
     : (nav === "dashboard" || nav === "metas" || nav === "ranking")
       ? <Header ano={ano} mes={mesAtual} onMes={setMes} visao={visao} onVisao={setVisao} periodoLabel={periodoLabel} />
       : undefined;
@@ -101,7 +107,7 @@ export default function Dashboard() {
   const h3 = "font-headline text-lg font-semibold text-primary mb-3";
 
   return (
-    <AppShell active={nav} onNavigate={setNav} title={TITULOS[nav].t} subtitle={TITULOS[nav].s} actions={actions}>
+    <AppShell active={nav} onNavigate={setNav} title={TITULOS[nav].t} subtitle={TITULOS[nav].s} actions={actions} papel={perm.papel!} usuarioNome={user?.usuario ?? ""} onLogout={logout}>
       {nav === "dashboard" && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
@@ -135,12 +141,14 @@ export default function Dashboard() {
       )}
 
       {nav === "metas" && (
-        <MetasVendedorTab linhas={linhas} ano={ano} meses={meses} multiMes={multiMes} onMeses={setMesesSel} invalidar={invalidar} loading={isLoading} dias={dias} todos={todos} />
+        <MetasVendedorTab linhas={linhas} ano={ano} meses={meses} multiMes={multiMes} onMeses={setMesesSel} invalidar={invalidar} loading={isLoading} dias={dias} todos={todos} podeEditar={perm.podeEditar} ehVendedor={perm.ehVendedor} />
       )}
 
       {nav === "ranking" && <RankingTab linhas={linhas} periodoLabel={periodoLabel} />}
 
       {nav === "trimestral" && <TrimestralModulo ano={ano} todos={todos} />}
+
+      {nav === "usuarios" && perm.podeGerenciarUsuarios && <UsuariosTab vendedores={todos} />}
 
       {nav === "equipe" && (
         <div className={cardCls}>
