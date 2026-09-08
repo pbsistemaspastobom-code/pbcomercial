@@ -8,7 +8,7 @@ const MEDAL = ["#E9C349", "#b8bcc4", "#cd7f32"]; // ouro, prata, bronze
 const ICON = [Trophy, Medal, Award];
 
 export function RankingTab({ linhas, periodoLabel }: { linhas: LinhaVendedor[]; periodoLabel?: string }) {
-  const [criterio, setCriterio] = useState<"venda" | "atingimento">("venda");
+  const [criterio, setCriterio] = useState<"venda" | "atingimento">("atingimento");
 
   const ranked = useMemo(
     () => [...linhas].sort((a, b) => (criterio === "venda" ? b.vendaLiquida - a.vendaLiquida : b.atingimento - a.atingimento)),
@@ -31,8 +31,8 @@ export function RankingTab({ linhas, periodoLabel }: { linhas: LinhaVendedor[]; 
       <div className="flex items-center gap-2 mb-5">
         <span className="text-sm text-ink-soft">Ordenar por:</span>
         <div className="inline-flex rounded-lg border border-border overflow-hidden">
-          <button onClick={() => setCriterio("venda")} className={`px-4 py-1.5 text-sm font-medium ${criterio === "venda" ? "bg-primary text-white" : "bg-white text-ink-soft"}`}>Venda Líquida</button>
           <button onClick={() => setCriterio("atingimento")} className={`px-4 py-1.5 text-sm font-medium ${criterio === "atingimento" ? "bg-primary text-white" : "bg-white text-ink-soft"}`}>Atingimento %</button>
+          <button onClick={() => setCriterio("venda")} className={`px-4 py-1.5 text-sm font-medium ${criterio === "venda" ? "bg-primary text-white" : "bg-white text-ink-soft"}`}>Venda Líquida</button>
         </div>
         {periodoLabel && <span className="text-xs text-ink-mute ml-auto">{periodoLabel}</span>}
       </div>
