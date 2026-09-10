@@ -32,39 +32,36 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
   const itens = NAV.filter((n) => n.papeis.includes(papel));
 
   const Sidebar = (
-    <aside className="w-[280px] shrink-0 bg-primary-dark text-white flex flex-col h-full">
+    <aside className="w-[260px] shrink-0 bg-white border-r border-[#E9ECEF] flex flex-col h-full">
       {/* Logo */}
       <div className="px-6 pt-6 pb-5">
-        <div className="bg-white rounded-xl px-3 py-2.5 flex items-center justify-center">
-          <img src="/logo.png" alt="Rede do Campo — Pasto Bom" className="h-9 object-contain" />
-        </div>
+        <img src="/logo.png" alt="Rede do Campo — Pasto Bom" className="h-9 object-contain" />
       </div>
 
       {/* Card usuário */}
-      <div className="px-4">
-        <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gold/90 text-primary-dark font-bold flex items-center justify-center uppercase">{usuarioNome.slice(0, 2)}</div>
+      <div className="px-4 mb-2">
+        <div className="rounded-xl bg-[#F1F5EF] px-3 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary text-white font-bold flex items-center justify-center uppercase text-xs shrink-0">{usuarioNome.slice(0, 2)}</div>
           <div className="leading-tight min-w-0">
-            <div className="font-semibold text-sm truncate">{usuarioNome}</div>
-            <div className="text-[11px] text-white/60 truncate">{rotuloPapel(papel)}</div>
+            <div className="font-semibold text-sm text-ink truncate">{usuarioNome}</div>
+            <div className="text-[11px] text-ink-mute truncate">{rotuloPapel(papel)}</div>
           </div>
         </div>
       </div>
 
       {/* Navegação */}
-      <nav className="flex-1 px-4 py-5 space-y-1">
+      <nav className="flex-1 px-4 py-2 space-y-1">
         {itens.map((item) => {
           const on = active === item.key;
           return (
             <button
               key={item.key}
               onClick={() => { onNavigate(item.key); setAberto(false); }}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                on ? "bg-primary-active text-white" : "text-white/70 hover:text-white hover:bg-white/5"
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                on ? "bg-[#D8F3DC] text-primary-dark" : "text-ink-soft hover:bg-[#F1F5EF]"
               }`}
             >
-              {on && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gold" />}
-              {item.icon}
+              <span className={on ? "text-primary" : "text-ink-mute"}>{item.icon}</span>
               {item.label}
             </button>
           );
@@ -72,9 +69,9 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
       </nav>
 
       {/* Rodapé */}
-      <div className="px-4 pb-5">
-        <button onClick={onLogout} className="w-full rounded-lg border border-white/10 hover:bg-white/5 px-4 py-3 text-white/70 hover:text-white text-sm flex items-center gap-2 transition-colors">
-          <LogOut className="w-4 h-4" /> Sair
+      <div className="px-4 pb-5 pt-2 border-t border-[#E9ECEF]">
+        <button onClick={onLogout} className="w-full rounded-full hover:bg-[#F1F5EF] px-4 py-2.5 text-ink-soft hover:text-ink text-sm font-semibold flex items-center gap-3 transition-colors">
+          <LogOut className="w-[18px] h-[18px] text-ink-mute" /> Sair
         </button>
       </div>
     </aside>
@@ -96,11 +93,11 @@ export function AppShell({ active, onNavigate, title, subtitle, actions, childre
       {/* Conteúdo */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Topo */}
-        <header className="relative z-30 shrink-0 bg-surface/80 backdrop-blur border-b border-[#e9ecef] px-5 lg:px-10 py-4 flex items-center gap-4">
+        <header className="relative z-30 shrink-0 bg-white border-b border-[#E9ECEF] px-5 lg:px-10 py-5 flex items-center gap-4">
           <button className="lg:hidden text-ink" onClick={() => setAberto(true)}><Menu className="w-6 h-6" /></button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-headline text-2xl font-semibold text-primary tracking-tight truncate">{title}</h1>
-            {subtitle && <p className="text-sm text-ink-soft truncate">{subtitle}</p>}
+            <h1 className="font-headline text-[26px] font-extrabold text-ink tracking-tight truncate">{title}</h1>
+            {subtitle && <p className="text-[11px] font-bold text-ink-mute uppercase tracking-wide truncate mt-0.5">{subtitle}</p>}
           </div>
           {actions && <div className="flex items-center gap-2 flex-wrap justify-end">{actions}</div>}
         </header>
