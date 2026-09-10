@@ -19,6 +19,8 @@ import { useResumoAnual } from "@/hooks/useResumoAnual";
 import { brl, pct, MESES, MESES_LONGO, semaforo } from "@/lib/formato";
 import { Target, DollarSign, Percent, TrendingUp, Calendar, Clock, Users } from "lucide-react";
 
+import { MobileHome } from "@/components/mobile/MobileHome";
+
 const TITULOS: Record<NavKey, { t: string; s: string }> = {
   dashboard: { t: "Painel Geral", s: "Visão anual consolidada — resultado 2026" },
   metas: { t: "Metas por Vendedor", s: "Acompanhamento individual e por setor" },
@@ -30,7 +32,7 @@ const TITULOS: Record<NavKey, { t: string; s: string }> = {
 };
 
 const ANUAL = Array.from({ length: 12 }, (_, i) => i + 1);
-const cortxt = { verde: "text-primary", amarelo: "text-[#8a6d00]", vermelho: "text-[#d0342c]" };
+const cortxt = { verde: "text-primary", amarelo: "text-[#9A7A00]", vermelho: "text-[#9A7A00]" };
 
 function Farol({ icone, titulo, valor, cor, destaque, amarelo, loading }: { icone: React.ReactNode; titulo: string; valor: string; cor?: "verde" | "amarelo" | "vermelho"; destaque?: boolean; amarelo?: boolean; loading?: boolean }) {
   return (
@@ -38,7 +40,7 @@ function Farol({ icone, titulo, valor, cor, destaque, amarelo, loading }: { icon
       {destaque && <span className="absolute left-0 right-0 top-0 h-1 bg-gold" />}
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-mute">{titulo}</span>
-        <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${amarelo ? "bg-[#fbf1c4] text-[#8a6d00]" : "bg-[#e8f1e5] text-primary"}`}>{icone}</span>
+        <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${amarelo ? "bg-[#FBF3D6] text-[#9A7A00]" : "bg-[#e8f1e5] text-primary"}`}>{icone}</span>
       </div>
       {loading ? <Skeleton className="h-8 w-28 mt-2" /> : <div className={`font-headline text-2xl font-bold mt-2 tnum ${cor ? cortxt[cor] : "text-primary"}`}>{valor}</div>}
     </div>
@@ -107,9 +109,21 @@ export default function Dashboard() {
   const h3 = "font-headline text-lg font-semibold text-primary mb-3";
 
   return (
-    <AppShell active={nav} onNavigate={setNav} title={TITULOS[nav].t} subtitle={TITULOS[nav].s} actions={actions} papel={perm.papel!} usuarioNome={user?.usuario ?? ""} onLogout={logout}>
+    <AppShell active={nav} onNavigate={setNav} title={TITULOS[nav].t} subtitle={TITULOS[nav].s} actions={actions} papel={perm.papel!} usuarioNome={user?.usuario ?? ""} onLogout={logout} hideActionsOnMobile={nav === "dashboard"}>
       {nav === "dashboard" && (
         <>
+          {/* Mobile: tela estilo app */}
+          <div className="lg:hidden">
+            <MobileHome
+              periodoLabel={periodoLabel} mesAtual={mesAtual} ano={ano} visao={visao}
+              onMes={setMes} onVisao={setVisao} meses={meses} onMeses={setMesesSel}
+              painel={painel} loading={isLoading} linhas={linhas} tris={tridata.porTri}
+              onVerVendedor={() => setNav("metas")}
+            />
+          </div>
+
+          {/* Desktop: painel completo */}
+          <div className="hidden lg:block">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
             <Farol icone={<Target className="w-4 h-4" />} titulo={tMeta} valor={brl(painel.meta)} loading={isLoading} destaque={painel.atingimento >= 100} />
             <Farol icone={<DollarSign className="w-4 h-4" />} titulo="Venda Líquida" valor={brl(painel.venda)} loading={isLoading} />
@@ -136,6 +150,7 @@ export default function Dashboard() {
           <div className="mt-6">
             <h3 className={h3}>Consolidado Trimestral</h3>
             <TrimestralTab tris={tridata.porTri} ano={ano} />
+          </div>
           </div>
         </>
       )}
