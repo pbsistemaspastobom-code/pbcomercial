@@ -12,38 +12,44 @@ export default {
           foreground: "hsl(var(--muted-foreground))",
         },
         pasto: {
-          escuro: "#2D6A27",
+          escuro: "#1C4416",
           medio: "#3A7D2E",
           claro: "#D6EDD3",
           amarelo: "#E8B800",
         },
-        // Agro-Corporate Precision
+        // Paleta PB Cadastro
         primary: {
-          DEFAULT: "#1b4332",
-          dark: "#012d1d",
-          container: "#1b4332",
-          active: "#2d6a4f",
+          DEFAULT: "#2D6A27",
+          dark: "#1C4416",
+          container: "#0F2E1E",
+          active: "#3A7D2E",
         },
         gold: {
-          DEFAULT: "#E9C349",
-          soft: "#fed65b",
-          deep: "#735c00",
+          DEFAULT: "#E8B800",
+          soft: "#FBF3D6",
+          deep: "#9A7A00",
         },
         surface: {
-          DEFAULT: "#f8f9fa",
-          card: "#ffffff",
-          low: "#f3f4f5",
-          high: "#e7e8e9",
+          DEFAULT: "#F8F9FA",
+          card: "#FFFFFF",
+          low: "#F1F5EF",
+          high: "#E9ECEF",
         },
         ink: {
-          DEFAULT: "#191c1d",
+          DEFAULT: "#243024",
           soft: "#414844",
-          mute: "#717973",
+          mute: "#6B7568",
+        },
+        // status (sem vermelho de dado — vermelho só em excluir/erro crítico)
+        status: {
+          okBg: "#D6EDD3", okText: "#1C4416",
+          alertaBg: "#FBF3D6", alertaText: "#9A7A00",
+          criticoBg: "#F7E3E1", criticoText: "#9A3B32",
         },
       },
       fontFamily: {
-        headline: ["'Hanken Grotesk'", "sans-serif"],
-        body: ["Inter", "sans-serif"],
+        headline: ["'Manrope'", "sans-serif"],
+        body: ["'Work Sans'", "sans-serif"],
       },
       borderRadius: {
         xl: "1rem",
