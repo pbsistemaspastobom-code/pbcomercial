@@ -70,27 +70,27 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f4f6f3] p-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-[#e6e9e3] overflow-hidden">
-        <div className="bg-[#012d1d] px-8 py-8 text-center">
-          <div className="bg-white rounded-xl px-3 py-3 inline-flex"><img src="/logo.png" alt="Pasto Bom" className="h-10 object-contain" /></div>
-          <div className="text-white font-semibold mt-4">Portal Comercial</div>
-          <div className="text-white/60 text-xs">Pasto Bom · Rede do Campo</div>
+    <div className="min-h-screen flex items-center justify-center bg-[#EEF2E9] p-4">
+      <div className="w-full max-w-sm bg-white rounded-[28px] shadow-xl overflow-hidden">
+        <div className="bg-[#0F2E1E] px-8 pt-10 pb-8 text-center">
+          <div className="bg-white rounded-2xl px-4 py-4 inline-flex shadow-sm"><img src="/logo.png" alt="Pasto Bom" className="h-11 object-contain" /></div>
+          <div className="text-white font-headline font-extrabold text-xl mt-5">Portal Comercial</div>
+          <div className="text-white/60 text-sm mt-0.5">Pasto Bom · Rede do Campo</div>
         </div>
-        <div className="p-8 space-y-4">
+        <div className="p-8 space-y-5">
           <div>
-            <label className="text-xs font-semibold text-[#3a4730] uppercase tracking-wide">Usuário</label>
+            <label className="text-[11px] font-bold text-ink-mute uppercase tracking-wide">Usuário</label>
             <input value={u} onChange={(e) => setU(e.target.value)} onKeyDown={(e) => e.key === "Enter" && entrar()}
-              className="mt-1 w-full h-11 rounded-lg border border-[#d6dbd2] px-3 focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/40" autoFocus />
+              className="mt-1.5 w-full h-12 rounded-xl bg-[#EEF2FB] px-4 text-ink focus:outline-none focus:ring-2 focus:ring-primary/30" autoFocus />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#3a4730] uppercase tracking-wide">Senha</label>
+            <label className="text-[11px] font-bold text-ink-mute uppercase tracking-wide">Senha</label>
             <input type="password" value={s} onChange={(e) => setS(e.target.value)} onKeyDown={(e) => e.key === "Enter" && entrar()}
-              className="mt-1 w-full h-11 rounded-lg border border-[#d6dbd2] px-3 focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/40" />
+              className="mt-1.5 w-full h-12 rounded-xl bg-[#EEF2FB] px-4 text-ink focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
-          {erro && <div className="text-sm text-[#b12318] bg-[#fbe0dd] rounded-lg px-3 py-2">{erro}</div>}
+          {erro && <div className="text-sm text-[#9A3B32] bg-[#F7E3E1] rounded-xl px-4 py-2.5">{erro}</div>}
           <button onClick={entrar} disabled={carregando}
-            className="w-full h-11 rounded-lg bg-[#2d6a4f] hover:bg-[#245c43] text-white font-semibold disabled:opacity-60">
+            className="w-full h-12 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-[15px] disabled:opacity-60 transition-colors">
             {carregando ? "Entrando..." : "Entrar"}
           </button>
         </div>
