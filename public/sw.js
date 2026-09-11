@@ -1,9 +1,13 @@
 // public/sw.js — cache básico do app shell (permite instalar e abrir mesmo com internet instável)
-const CACHE = "pbcomercial-v1";
+const CACHE = "pbcomercial-v2";
 const APP_SHELL = ["/", "/index.html", "/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      Promise.all(APP_SHELL.map((url) => cache.add(url).catch((err) => console.warn("sw: falhou cachear", url, err))))
+    )
+  );
   self.skipWaiting();
 });
 
