@@ -1,6 +1,7 @@
 // src/auth.tsx — controle de acesso (login, papéis e permissões)
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export type Papel = "admin" | "gerencia" | "supervisao" | "vendedor";
 export interface Usuario { usuario: string; papel: Papel; codigo_vendedor: string | null; }
@@ -95,6 +96,7 @@ export function Login() {
           </button>
         </div>
       </div>
+      <InstallPrompt />
     </div>
   );
 }
