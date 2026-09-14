@@ -14,16 +14,17 @@ import { SETORES } from "@/data/planejamento2026";
 import { importarPlanilha, type ResultadoImport } from "@/lib/importVendas";
 import { ImportarDialog } from "@/components/dashboard/ImportarDialog";
 import { GerenciarEquipeModal } from "@/components/dashboard/GerenciarEquipeModal";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import type { LinhaVendedor, VendedorEfetivo } from "@/hooks/useMetasData";
 
-const semCor = { verde: "bg-[#e2f3e0] text-[#1f7a1a]", amarelo: "bg-[#fbf1c4] text-[#8a6d00]", vermelho: "bg-[#fbe0dd] text-[#b12318]" };
+const semCor = { verde: "bg-[#D6EDD3] text-[#1C4416]", amarelo: "bg-[#FBF3D6] text-[#9A7A00]", vermelho: "bg-[#FBF3D6] text-[#9A7A00]" };
 
-const farolTxt = { verde: "text-pasto-escuro", amarelo: "text-[#8a6d00]", vermelho: "text-[#d0342c]" };
+const farolTxt = { verde: "text-pasto-escuro", amarelo: "text-[#9A7A00]", vermelho: "text-[#9A7A00]" };
 const Farol = ({ icone, titulo, valor, cor, amarelo, loading }: { icone: React.ReactNode; titulo: string; valor: string; cor?: "verde" | "amarelo" | "vermelho"; amarelo?: boolean; loading?: boolean }) => (
   <div className="rounded-2xl border border-border bg-white p-4">
     <div className="flex items-center justify-between text-[#5c6a50]">
       <span className="text-xs font-semibold">{titulo}</span>
-      <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${amarelo ? "bg-[#fbf1c4] text-[#8a6d00]" : "bg-pasto-claro text-pasto-escuro"}`}>{icone}</span>
+      <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${amarelo ? "bg-[#FBF3D6] text-[#9A7A00]" : "bg-pasto-claro text-pasto-escuro"}`}>{icone}</span>
     </div>
     {loading ? <div className="h-6 w-20 mt-2 rounded bg-[#e6eae1] animate-pulse" /> : <div className={`text-lg font-extrabold mt-1.5 ${cor ? farolTxt[cor] : ""}`}>{valor}</div>}
   </div>
@@ -351,8 +352,8 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
                         <td className="px-3 py-2 border-b border-[#eef1eb] whitespace-nowrap">{l.nome}</td>
                         <td className="px-2 py-2 text-right border-b border-[#eef1eb] font-semibold">
                           {editando ? (
-                            <input type="number" defaultValue={l.meta} onChange={(e) => { editRef.current[l.codigo] = Number(e.target.value) || 0; }}
-                              className="w-24 text-right border border-pasto-amarelo rounded px-1 py-0.5" />
+                            <CurrencyInput defaultValue={l.meta} onChange={(v) => { editRef.current[l.codigo] = v; }}
+                              className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" />
                           ) : money(l.meta)}
                         </td>
                         <td className="px-2 py-2 text-right border-b border-[#eef1eb] font-semibold">{money(l.vendaLiquida)}</td>
@@ -405,13 +406,13 @@ export const MetasVendedorTab = React.memo(function MetasVendedorTab({ linhas, a
               <div key={s.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                 <span className="min-w-0 flex-1">{new Date(s.created_at).toLocaleString("pt-BR")}<div className="text-xs text-muted-foreground truncate">{s.descricao}</div></span>
                 <Button size="sm" variant="outline" onClick={() => restaurarSnapshot(s.id)}>Restaurar</Button>
-                <Button size="sm" variant="outline" className="text-[#b12318] px-2" title="Apagar" onClick={() => apagarSnapshot(s.id)}><Trash2 className="w-4 h-4" /></Button>
+                <Button size="sm" variant="outline" className="text-[#9A3B32] px-2" title="Apagar" onClick={() => apagarSnapshot(s.id)}><Trash2 className="w-4 h-4" /></Button>
               </div>
             ))}
             {!snapshots.length && <div className="py-4 text-muted-foreground text-sm">Nenhum snapshot ainda.</div>}
           </div>
           <DialogFooter className="justify-between">
-            {snapshots.length > 0 && <Button variant="outline" className="text-[#b12318]" onClick={apagarTodosSnapshots}>Apagar todos</Button>}
+            {snapshots.length > 0 && <Button variant="outline" className="text-[#9A3B32]" onClick={apagarTodosSnapshots}>Apagar todos</Button>}
             <Button variant="outline" onClick={() => setHistAberto(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
