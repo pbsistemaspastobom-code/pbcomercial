@@ -5,12 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Pencil, Upload, Download, EyeOff, Eye } from "lucide-react";
 import { ImportarDialog } from "@/components/dashboard/ImportarDialog";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { importarPlanilha, type ResultadoImport } from "@/lib/importVendas";
 import { useTrimestralData } from "@/hooks/useTrimestralData";
 import type { VendedorEfetivo } from "@/hooks/useMetasData";
 import { brl2, pct, semaforo } from "@/lib/formato";
 
-const semCor = { verde: "text-[#1f7a1a]", amarelo: "text-[#8a6d00]", vermelho: "text-[#d0342c]" };
+const semCor = { verde: "text-[#1f7a1a]", amarelo: "text-[#9A7A00]", vermelho: "text-[#9A7A00]" };
 
 export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorEfetivo[] }) {
   const { porTri, linhas, metaGeral, invalidar } = useTrimestralData(ano);
@@ -145,7 +146,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
           </div>
           {editandoMeta ? (
             <div className="flex items-center gap-1 mt-1">
-              <input type="number" value={metaInput} onChange={(e) => setMetaInput(Number(e.target.value) || 0)} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5 text-sm" />
+              <CurrencyInput defaultValue={metaInput} onChange={setMetaInput} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5 text-sm" />
               <button onClick={salvarMetaGeral} disabled={salvandoMeta} className="text-[11px] bg-primary text-white rounded px-2 py-1">{salvandoMeta ? "..." : "OK"}</button>
               <button onClick={() => setEditandoMeta(false)} className="text-[11px] text-ink-mute px-1">✕</button>
             </div>
@@ -155,7 +156,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
         </div>
         <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Venda Líquida</div><div className="font-headline text-xl font-bold text-primary mt-1 tnum">{money(resumo.venda)}</div></div>
         <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Atingimento</div><div className={`font-headline text-xl font-bold mt-1 tnum ${semCor[semaforo(resumo.atingimento)]}`}>{pct(resumo.atingimento)}</div></div>
-        <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Ainda Falta</div><div className="font-headline text-xl font-bold text-[#d0342c] mt-1 tnum">{money(Math.max(resumo.meta - resumo.venda, 0))}</div></div>
+        <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Ainda Falta</div><div className="font-headline text-xl font-bold text-[#9A7A00] mt-1 tnum">{money(Math.max(resumo.meta - resumo.venda, 0))}</div></div>
       </div>
 
       {/* Tabela */}
@@ -173,12 +174,12 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
                 <td className="py-2.5">{l.nome}</td>
                 <td className="py-2.5 text-ink-mute">{l.setor}</td>
                 <td className="py-2.5 text-right">
-                  {editando ? <input type="number" defaultValue={l.meta} onChange={(e) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], meta: Number(e.target.value) || 0 }; }} className="w-24 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.meta)}
+                  {editando ? <CurrencyInput defaultValue={l.meta} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], meta: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.meta)}
                 </td>
                 <td className="py-2.5 text-right font-semibold">
-                  {editando ? <input type="number" defaultValue={l.venda} onChange={(e) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], venda: Number(e.target.value) || 0 }; }} className="w-24 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.venda)}
+                  {editando ? <CurrencyInput defaultValue={l.venda} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], venda: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.venda)}
                 </td>
-                <td className="py-2.5 text-right font-bold" style={{ color: l.atingimento >= 100 ? "#1f7a1a" : l.atingimento >= 80 ? "#8a6d00" : "#d0342c" }}>{pct(l.atingimento)}</td>
+                <td className="py-2.5 text-right font-bold" style={{ color: l.atingimento >= 100 ? "#1f7a1a" : l.atingimento >= 80 ? "#9A7A00" : "#9A7A00" }}>{pct(l.atingimento)}</td>
               </tr>
             ))}
             {!dados.length && <tr><td colSpan={5} className="py-6 text-center text-ink-mute">Nenhum dado no Q{tri}. Importe o acumulado ou use Editar Valores.</td></tr>}
