@@ -1,5 +1,5 @@
 // src/components/ui/currency-input.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { parseBRL, formatBRLInput } from "@/lib/formato";
 
 interface Props {
@@ -8,11 +8,19 @@ interface Props {
   className?: string;
 }
 
-/** Campo de valor: aceita ponto e vírgula livremente (ex: 400000, 400.000, 1.500,50) e formata ao sair do campo. */
+/**
+ * Campo de valor: aceita ponto e vírgula livremente (400000, 400.000, 1.500,50).
+ * Enquanto o campo está em foco, o texto é do usuário (não é reformatado a cada tecla);
+ * ao sair do campo, formata no padrão brasileiro.
+ */
 export function CurrencyInput({ defaultValue, onChange, className }: Props) {
   const [texto, setTexto] = useState(formatBRLInput(defaultValue));
+  const emFoco = useRef(false);
 
-  useEffect(() => { setTexto(formatBRLInput(defaultValue)); }, [defaultValue]);
+  // só sincroniza com o valor de fora quando o usuário NÃO está digitando
+  useEffect(() => {
+    if (!emFoco.current) setTexto(formatBRLInput(defaultValue));
+  }, [defaultValue]);
 
   return (
     <input
@@ -24,8 +32,14 @@ export function CurrencyInput({ defaultValue, onChange, className }: Props) {
         setTexto(v);
         onChange(parseBRL(v));
       }}
-      onBlur={() => setTexto(formatBRLInput(parseBRL(texto)))}
-      onFocus={(e) => e.target.select()}
+      onFocus={(e) => {
+        emFoco.current = true;
+        e.target.select();
+      }}
+      onBlur={() => {
+        emFoco.current = false;
+        setTexto(formatBRLInput(parseBRL(texto)));
+      }}
       className={className}
     />
   );
