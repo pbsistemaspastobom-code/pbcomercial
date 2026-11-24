@@ -3,7 +3,7 @@ import React, { useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Pencil, Upload, Download, EyeOff, Eye } from "lucide-react";
+import { Pencil, Upload, Download, EyeOff, Eye, ChevronRight } from "lucide-react";
 import { ImportarDialog } from "@/components/dashboard/ImportarDialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { importarPlanilha, type ResultadoImport } from "@/lib/importVendas";
@@ -32,6 +32,22 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
   const resumo = porTri.find((p) => p.tri === tri)!;
   const totalVenda = dados.reduce((s, l) => s + l.venda, 0);
   const participacao = (v: number) => (totalVenda > 0 ? (v / totalVenda) * 100 : 0);
+
+  // Agrupa por setor (maior Venda Líquida primeiro)
+  const grupos = Object.values(
+    dados.reduce<Record<string, { setor: string; venda: number; vendedores: typeof dados }>>((acc, l) => {
+      const s = l.setor || "Sem setor";
+      (acc[s] ??= { setor: s, venda: 0, vendedores: [] }).vendedores.push(l);
+      acc[s].venda += l.venda;
+      return acc;
+    }, {})
+  )
+    .map((g) => ({ ...g, vendedores: [...g.vendedores].sort((a, b) => b.venda - a.venda) }))
+    .sort((a, b) => b.venda - a.venda);
+  const [abertos, setAbertos] = useState<Set<string>>(new Set());
+  const alternar = (s: string) => setAbertos((prev) => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
+  const todosAbertos = grupos.length > 0 && grupos.every((g) => abertos.has(g.setor));
+  const alternarTodos = () => setAbertos(todosAbertos ? new Set() : new Set(grupos.map((g) => g.setor)));
 
   const iniciarEdicao = () => { editRef.current = {}; dados.forEach((l) => { editRef.current[l.codigo] = { meta: l.meta, venda: l.venda }; }); setEditando(true); };
   const salvarEdicao = async () => {
@@ -161,28 +177,73 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
         <div className="card-soft p-4"><div className="text-[11px] uppercase text-ink-mute font-semibold">Ainda Falta</div><div className="font-headline text-xl font-bold text-[#9A7A00] mt-1 tnum">{money(Math.max(resumo.meta - resumo.venda, 0))}</div></div>
       </div>
 
-      {/* Tabela */}
+      {/* Tabela agrupada por setor */}
       <div className="card-soft p-5 overflow-x-auto">
+        {!!grupos.length && (
+          <div className="flex justify-end mb-2">
+            <button onClick={alternarTodos} disabled={editando} className="text-xs font-semibold text-primary hover:underline disabled:opacity-40">
+              {todosAbertos ? "Recolher todos" : "Expandir todos"}
+            </button>
+          </div>
+        )}
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[11px] uppercase tracking-wider text-ink-mute text-left border-b border-[#e9ecef]">
-              <th className="py-2.5">Vendedor</th><th className="py-2.5">Setor</th>
-              <th className="py-2.5 text-right">Venda Líquida</th><th className="py-2.5 text-right">% do Total</th>
+              <th className="py-2.5">Setor / Vendedor</th>
+              <th className="py-2.5 text-right">Venda Líquida</th>
+              <th className="py-2.5 text-right w-[34%]">% do Total</th>
             </tr>
           </thead>
           <tbody>
-            {dados.map((l) => (
-              <tr key={l.codigo} className="border-b border-[#f1f3f4]">
-                <td className="py-2.5">{l.nome}</td>
-                <td className="py-2.5 text-ink-mute">{l.setor}</td>
-                <td className="py-2.5 text-right font-semibold">
-                  {editando ? <CurrencyInput defaultValue={l.venda} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], venda: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.venda)}
-                </td>
-                <td className="py-2.5 text-right font-bold text-primary">{pct(participacao(l.venda))}</td>
-              </tr>
-            ))}
-            {!dados.length && <tr><td colSpan={4} className="py-6 text-center text-ink-mute">Nenhum dado no Q{tri}. Importe o acumulado ou use Editar Valores.</td></tr>}
+            {grupos.map((g) => {
+              const aberto = editando || abertos.has(g.setor);
+              const pg = participacao(g.venda);
+              return (
+                <React.Fragment key={g.setor}>
+                  <tr className="border-b border-[#e9ecef] bg-[#f6f8f5] cursor-pointer select-none hover:bg-[#eef2ec]" onClick={() => !editando && alternar(g.setor)}>
+                    <td className="py-3 pl-1 font-semibold text-ink">
+                      <span className="inline-flex items-center gap-2">
+                        <ChevronRight className={`w-4 h-4 text-primary transition-transform ${aberto ? "rotate-90" : ""}`} />
+                        {g.setor}
+                        <span className="text-[11px] font-normal text-ink-mute">({g.vendedores.length} vendedor{g.vendedores.length === 1 ? "" : "es"})</span>
+                      </span>
+                    </td>
+                    <td className="py-3 text-right font-bold tnum">{money(g.venda)}</td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <div className="hidden sm:block flex-1 max-w-[180px] h-2 rounded-full bg-[#e3e8e1] overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(pg, 100)}%` }} />
+                        </div>
+                        <span className="font-bold text-primary tnum w-14 text-right">{pct(pg)}</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {aberto && g.vendedores.map((l) => (
+                    <tr key={l.codigo} className="border-b border-[#f1f3f4]">
+                      <td className="py-2.5 pl-9">{l.nome}</td>
+                      <td className="py-2.5 text-right font-semibold tnum">
+                        {editando ? <CurrencyInput defaultValue={l.venda} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], venda: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.venda)}
+                      </td>
+                      <td className="py-2.5 text-right tnum">
+                        <span className="font-bold text-primary">{pct(participacao(l.venda))}</span>
+                        <span className="block text-[11px] text-ink-mute">{pct(g.venda > 0 ? (l.venda / g.venda) * 100 : 0)} do setor</span>
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+            {!dados.length && <tr><td colSpan={3} className="py-6 text-center text-ink-mute">Nenhum dado no Q{tri}. Importe o acumulado ou use Editar Valores.</td></tr>}
           </tbody>
+          {!!grupos.length && (
+            <tfoot>
+              <tr className="border-t-2 border-[#e9ecef]">
+                <td className="py-3 pl-1 font-bold">Total</td>
+                <td className="py-3 text-right font-bold tnum">{money(totalVenda)}</td>
+                <td className="py-3 text-right font-bold text-primary tnum">{pct(totalVenda > 0 ? 100 : 0)}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
