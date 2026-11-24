@@ -30,6 +30,8 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
   const dados = linhas(tri);
   const money = (v: number) => (oculto ? "•••••" : brl2(v));
   const resumo = porTri.find((p) => p.tri === tri)!;
+  const totalVenda = dados.reduce((s, l) => s + l.venda, 0);
+  const participacao = (v: number) => (totalVenda > 0 ? (v / totalVenda) * 100 : 0);
 
   const iniciarEdicao = () => { editRef.current = {}; dados.forEach((l) => { editRef.current[l.codigo] = { meta: l.meta, venda: l.venda }; }); setEditando(true); };
   const salvarEdicao = async () => {
@@ -101,8 +103,8 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
   };
 
   const exportar = () => {
-    const rows = [["Vendedor", "Setor", "Meta", "Venda Liquida", "Atingimento %"]];
-    dados.forEach((l) => rows.push([l.nome, l.setor, String(l.meta), String(l.venda), l.atingimento.toFixed(1)]));
+    const rows = [["Vendedor", "Setor", "Venda Liquida", "% do Total"]];
+    dados.forEach((l) => rows.push([l.nome, l.setor, String(l.venda), participacao(l.venda).toFixed(1)]));
     const csv = rows.map((r) => r.join(";")).join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -165,7 +167,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
           <thead>
             <tr className="text-[11px] uppercase tracking-wider text-ink-mute text-left border-b border-[#e9ecef]">
               <th className="py-2.5">Vendedor</th><th className="py-2.5">Setor</th>
-              <th className="py-2.5 text-right">Meta</th><th className="py-2.5 text-right">Venda Líquida</th><th className="py-2.5 text-right">Atingimento</th>
+              <th className="py-2.5 text-right">Venda Líquida</th><th className="py-2.5 text-right">% do Total</th>
             </tr>
           </thead>
           <tbody>
@@ -173,16 +175,13 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
               <tr key={l.codigo} className="border-b border-[#f1f3f4]">
                 <td className="py-2.5">{l.nome}</td>
                 <td className="py-2.5 text-ink-mute">{l.setor}</td>
-                <td className="py-2.5 text-right">
-                  {editando ? <CurrencyInput defaultValue={l.meta} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], meta: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.meta)}
-                </td>
                 <td className="py-2.5 text-right font-semibold">
                   {editando ? <CurrencyInput defaultValue={l.venda} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], venda: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.venda)}
                 </td>
-                <td className="py-2.5 text-right font-bold" style={{ color: l.atingimento >= 100 ? "#1f7a1a" : l.atingimento >= 80 ? "#9A7A00" : "#9A7A00" }}>{pct(l.atingimento)}</td>
+                <td className="py-2.5 text-right font-bold text-primary">{pct(participacao(l.venda))}</td>
               </tr>
             ))}
-            {!dados.length && <tr><td colSpan={5} className="py-6 text-center text-ink-mute">Nenhum dado no Q{tri}. Importe o acumulado ou use Editar Valores.</td></tr>}
+            {!dados.length && <tr><td colSpan={4} className="py-6 text-center text-ink-mute">Nenhum dado no Q{tri}. Importe o acumulado ou use Editar Valores.</td></tr>}
           </tbody>
         </table>
       </div>
