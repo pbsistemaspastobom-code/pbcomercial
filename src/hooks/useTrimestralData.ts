@@ -26,7 +26,7 @@ export function useTrimestralData(ano: number) {
 
   const cfgMap = useMemo(() => {
     const m: Record<string, { nome: string; setor: string; ativo: boolean }> = {};
-    for (const c of query.data?.cfg ?? []) if (c.codigo) m[c.codigo] = { nome: c.nome || c.codigo, setor: c.setor || "Outros", ativo: c.ativo ?? true };
+    for (const c of query.data?.cfg ?? []) if (c.codigo) m[c.codigo] = { nome: (c.nome || c.codigo) + (c.ativo === false ? " (inativo)" : ""), setor: c.setor || "Outros", ativo: c.ativo ?? true };
     return m;
   }, [query.data]);
 
@@ -43,7 +43,8 @@ export function useTrimestralData(ano: number) {
   const linhas = useCallback((tri: number): LinhaTri[] => {
     const codes = new Set<string>([...Object.keys(cfgMap), ...Object.keys(mapa[tri] ?? {})]);
     codes.delete("__GERAL__");
-    return [...codes].filter((c) => cfgMap[c]?.ativo ?? true).map((codigo) => {
+    // inativos continuam aparecendo se tiveram venda no trimestre (para bater com o total do cartão)
+    return [...codes].filter((c) => (cfgMap[c]?.ativo ?? true) || (mapa[tri]?.[c]?.venda ?? 0) !== 0).map((codigo) => {
       const d = mapa[tri]?.[codigo] ?? { meta: 0, venda: 0 };
       const info = cfgMap[codigo] ?? { nome: codigo, setor: "Outros" };
       return { codigo, nome: info.nome, setor: info.setor, meta: d.meta, venda: d.venda, atingimento: d.meta > 0 ? (d.venda / d.meta) * 100 : 0 };

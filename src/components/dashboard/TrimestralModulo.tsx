@@ -31,7 +31,10 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
   const money = (v: number) => (oculto ? "•••••" : brl2(v));
   const resumo = porTri.find((p) => p.tri === tri)!;
   const totalVenda = dados.reduce((s, l) => s + l.venda, 0);
-  const participacao = (v: number) => (totalVenda > 0 ? (v / totalVenda) * 100 : 0);
+  // % = contribuição para a META GERAL do trimestre (a soma fecha com o Atingimento do cartão)
+  const metaTri = resumo.meta;
+  const participacao = (v: number) => (metaTri > 0 ? (v / metaTri) * 100 : 0);
+  const pctMeta = (v: number) => (metaTri > 0 ? pct(participacao(v)) : "—");
 
   // Agrupa por setor (maior Venda Líquida primeiro)
   const grupos = Object.values(
@@ -119,7 +122,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
   };
 
   const exportar = () => {
-    const rows = [["Vendedor", "Setor", "Venda Liquida", "% do Total"]];
+    const rows = [["Vendedor", "Setor", "Venda Liquida", "% da Meta Geral"]];
     dados.forEach((l) => rows.push([l.nome, l.setor, String(l.venda), participacao(l.venda).toFixed(1)]));
     const csv = rows.map((r) => r.join(";")).join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
@@ -191,7 +194,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
             <tr className="text-[11px] uppercase tracking-wider text-ink-mute text-left border-b border-[#e9ecef]">
               <th className="py-2.5">Setor / Vendedor</th>
               <th className="py-2.5 text-right">Venda Líquida</th>
-              <th className="py-2.5 text-right w-[34%]">% do Total</th>
+              <th className="py-2.5 text-right w-[34%]">% da Meta Geral</th>
             </tr>
           </thead>
           <tbody>
@@ -214,7 +217,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
                         <div className="hidden sm:block flex-1 max-w-[180px] h-2 rounded-full bg-[#e3e8e1] overflow-hidden">
                           <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(pg, 100)}%` }} />
                         </div>
-                        <span className="font-bold text-primary tnum w-14 text-right">{pct(pg)}</span>
+                        <span className="font-bold text-primary tnum w-14 text-right">{pctMeta(g.venda)}</span>
                       </div>
                     </td>
                   </tr>
@@ -225,8 +228,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
                         {editando ? <CurrencyInput defaultValue={l.venda} onChange={(v) => { editRef.current[l.codigo] = { ...editRef.current[l.codigo], venda: v }; }} className="w-28 text-right border border-pasto-amarelo rounded px-1 py-0.5" /> : money(l.venda)}
                       </td>
                       <td className="py-2.5 text-right tnum">
-                        <span className="font-bold text-primary">{pct(participacao(l.venda))}</span>
-                        <span className="block text-[11px] text-ink-mute">{pct(g.venda > 0 ? (l.venda / g.venda) * 100 : 0)} do setor</span>
+                        <span className="font-semibold text-primary">{pctMeta(l.venda)}</span>
                       </td>
                     </tr>
                   ))}
@@ -240,7 +242,7 @@ export function TrimestralModulo({ ano, todos }: { ano: number; todos: VendedorE
               <tr className="border-t-2 border-[#e9ecef]">
                 <td className="py-3 pl-1 font-bold">Total</td>
                 <td className="py-3 text-right font-bold tnum">{money(totalVenda)}</td>
-                <td className="py-3 text-right font-bold text-primary tnum">{pct(totalVenda > 0 ? 100 : 0)}</td>
+                <td className="py-3 text-right font-bold text-primary tnum">{pctMeta(totalVenda)}</td>
               </tr>
             </tfoot>
           )}
