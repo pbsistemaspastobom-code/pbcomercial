@@ -15,7 +15,6 @@ export function RankingTab({ linhas, periodoLabel }: { linhas: LinhaVendedor[]; 
     [linhas, criterio]
   );
   const top3 = ranked.slice(0, 3);
-  const maxVenda = Math.max(...ranked.map((l) => l.vendaLiquida), 1);
 
   if (!linhas.length) {
     return (
@@ -70,7 +69,7 @@ export function RankingTab({ linhas, periodoLabel }: { linhas: LinhaVendedor[]; 
               <tr className="text-[11px] uppercase tracking-wider text-ink-mute text-left border-b border-[#e9ecef]">
                 <th className="py-2.5 w-10">#</th><th className="py-2.5">Vendedor</th><th className="py-2.5">Setor</th>
                 <th className="py-2.5 text-right">Meta</th><th className="py-2.5 text-right">Venda Líquida</th>
-                <th className="py-2.5">Progresso</th><th className="py-2.5 text-right">Atingimento</th>
+                <th className="py-2.5 text-right">Atingimento</th>
               </tr>
             </thead>
             <tbody>
@@ -83,11 +82,6 @@ export function RankingTab({ linhas, periodoLabel }: { linhas: LinhaVendedor[]; 
                     <td className="py-3 text-ink-mute">{l.setor}</td>
                     <td className="py-3 text-right tnum">{brl(l.meta)}</td>
                     <td className="py-3 text-right tnum font-semibold">{brl(l.vendaLiquida)}</td>
-                    <td className="py-3 w-40">
-                      <div className="h-2 rounded-full bg-[#eef1eb] overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${Math.min((l.vendaLiquida / maxVenda) * 100, 100)}%`, background: "#2d6a4f" }} />
-                      </div>
-                    </td>
                     <td className="py-3 text-right tnum font-bold" style={{ color: cor }}>{pct(l.atingimento)}</td>
                   </tr>
                 );
